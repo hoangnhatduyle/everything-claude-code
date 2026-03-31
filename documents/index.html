@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ECC Command Reference</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #f4f5f9;
+    --surface: #ffffff;
+    --surface2: #eef0f8;
+    --border: #d8dcea;
+    --accent:  #5b4ed4;
+    --accent2: #1a7fc1;
+    --accent3: #1d9e86;
+    --accent4: #c4620a;
+    --accent5: #c0254a;
+    --accent6: #2e7d52;
+    --text:  #1a1d2e;
+    --muted: #6470a0;
+    --code-bg: #eef0f8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 10.5px;
+    line-height: 1.4;
+    padding: 18px 20px;
+    width: 100%;
+  }
+
+  /* ── Utilities ── */
+  .avoid { break-inside: avoid; }
+
+  /* ── Header ── */
+  .header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 13px; padding-bottom: 11px;
+    border-bottom: 2px solid var(--accent);
+    break-inside: avoid; break-after: avoid;
+  }
+  .header-logo {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .header h1 { font-size: 18px; font-weight: 800; letter-spacing: -.4px; }
+  .header h1 span { color: var(--accent); }
+  .header p { color: var(--muted); font-size: 10px; margin-top: 1px; }
+  .header-badge {
+    margin-left: auto;
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 3px 9px; border-radius: 20px;
+    font-size: 9.5px; color: var(--muted); white-space: nowrap;
+  }
+
+  /* ── Section label ── */
+  .sec {
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted);
+    margin: 10px 0 6px;
+    display: flex; align-items: center; gap: 7px;
+    break-inside: avoid; break-after: avoid;
+  }
+  .sec::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── Generic card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+    break-inside: avoid;
+  }
+  .card-hd {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 10px;
+    font-size: 9px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase;
+    border-bottom: 1px solid var(--border); background: var(--surface2);
+    break-after: avoid;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .card-bd { padding: 6px 10px; }
+
+  /* ── Command row ── */
+  .cr {
+    display: flex; align-items: flex-start; gap: 6px;
+    padding: 3px 0; border-bottom: 1px solid var(--border);
+    break-inside: avoid;
+  }
+  .cr:last-child { border-bottom: none; }
+  .cmd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 600; color: var(--accent2);
+    white-space: nowrap; min-width: 120px; flex-shrink: 0;
+  }
+  .desc { color: var(--muted); font-size: 9.5px; line-height: 1.35; }
+
+  /* ── Mode strip ── */
+  .mode-grid {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 6px;
+    margin-bottom: 10px; break-inside: avoid;
+  }
+  .mode-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; padding: 7px 10px; break-inside: avoid;
+  }
+  .mode-lbl { font-size: 9px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 1px; }
+  .mode-cmd { font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+  .mode-desc { color: var(--muted); font-size: 9px; margin-top: 2px; }
+
+  /* ── Everyday cards ── */
+  .ev-grid {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 7px;
+    margin-bottom: 10px; break-inside: avoid;
+  }
+  .ev {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; padding: 8px 10px;
+    position: relative; overflow: hidden; break-inside: avoid;
+  }
+  .ev::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+  .ev.c1::before{background:var(--accent);}  .ev.c2::before{background:var(--accent2);}
+  .ev.c3::before{background:var(--accent3);} .ev.c4::before{background:var(--accent4);}
+  .ev.c5::before{background:var(--accent5);} .ev.c6::before{background:var(--accent6);}
+  .ev-cmd { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; margin-bottom:2px; }
+  .ev.c1 .ev-cmd{color:var(--accent);}  .ev.c2 .ev-cmd{color:var(--accent2);}
+  .ev.c3 .ev-cmd{color:var(--accent3);} .ev.c4 .ev-cmd{color:var(--accent4);}
+  .ev.c5 .ev-cmd{color:var(--accent5);} .ev.c6 .ev-cmd{color:var(--accent6);}
+  .ev-title { font-weight:700; font-size:10px; margin-bottom:3px; }
+  .ev-desc  { color:var(--muted); font-size:9px; line-height:1.35; }
+  .ev-ex {
+    margin-top:4px; background:var(--code-bg); border:1px solid var(--border);
+    border-radius:4px; padding:2px 6px;
+    font-family:'JetBrains Mono',monospace; font-size:8.5px; color:var(--muted);
+  }
+
+  /* ── Badges ── */
+  .badge { display:inline-block; font-size:8px; font-weight:700; padding:1px 4px; border-radius:3px; }
+  .bc { background:#fde8e8; color:#b91c1c; border:1px solid #fca5a5; }
+  .bh { background:#fef3e2; color:#c4620a; border:1px solid #fdba74; }
+  .bm { background:#fefce8; color:#a16207; border:1px solid #fde047; }
+  .bl { background:#ecfdf5; color:#1d9e86; border:1px solid #6ee7b7; }
+
+  /* ── Lang tag ── */
+  .lang {
+    display:inline-block; font-size:8px; font-weight:600; padding:1px 4px;
+    border-radius:3px; background:var(--surface2); border:1px solid var(--border);
+    color:var(--muted); margin-right:2px;
+  }
+
+  /* ── Grid helpers ── */
+  .g3  { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .g2  { display:grid; grid-template-columns:1fr 1fr;     gap:10px; }
+  .sp2 { grid-column: span 2; }
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
+
+  /* ── Workflow cards ── */
+  .wf-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; break-inside:avoid; }
+  .wf {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:7px; padding:8px 10px; break-inside:avoid;
+  }
+  .wf-title { font-weight:700; font-size:9.5px; color:var(--accent4); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; break-after:avoid; }
+  .ws { display:flex; align-items:flex-start; gap:5px; padding:2px 0; break-inside:avoid; }
+  .sn {
+    width:14px; height:14px; border-radius:50%;
+    background:var(--surface2); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:7.5px; font-weight:700; color:var(--muted); flex-shrink:0; margin-top:1px;
+  }
+  .sc { font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; color:var(--accent); }
+  .sn2 { font-size:8.5px; color:var(--muted); }
+
+  /* ════ PRINT ════ */
+  @media print {
+    @page { margin: 0.4in; size: letter landscape; }
+
+    body { background:#fff; padding:0; }
+
+    .page-break { break-before: page; }
+
+    .card, .ev, .wf, .mode-card,
+    .card-hd, .cr, .ws,
+    .sec, .header,
+    .mode-grid, .ev-grid, .wf-grid,
+    .g3, .g2 { break-inside: avoid !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header avoid">
+  <div class="header-logo">⚡</div>
+  <div>
+    <h1>Everything <span>Claude Code</span> — Command Reference</h1>
+    <p>Slash commands that invoke specialized agents with structured workflows on top of Ask / Plan / Edit modes</p>
+  </div>
+  <div class="header-badge">claude.ai · Print & Keep</div>
+</div>
+
+<!-- Modes -->
+<div class="sec avoid">Claude Code Modes + Best Pairings</div>
+<div class="mode-grid">
+  <div class="mode-card">
+    <div class="mode-lbl" style="color:var(--accent)">Plan Mode</div>
+    <div class="mode-cmd" style="color:var(--accent)">→ pair with /plan</div>
+    <div class="mode-desc">Thinks before acting. /plan adds the planner framework on top.</div>
+  </div>
+  <div class="mode-card">
+    <div class="mode-lbl" style="color:var(--accent2)">Edit Mode</div>
+    <div class="mode-cmd" style="color:var(--accent2)">→ pair with /tdd · /build-fix · /refactor-clean</div>
+    <div class="mode-desc">Writes code. These commands control <em>how</em> it writes.</div>
+  </div>
+  <div class="mode-card">
+    <div class="mode-lbl" style="color:var(--accent3)">Ask Mode</div>
+    <div class="mode-cmd" style="color:var(--accent3)">→ pair with /docs · /code-review · /aside</div>
+    <div class="mode-desc">Answers questions. These give it specialized knowledge.</div>
+  </div>
+</div>
+
+<!-- Everyday -->
+<div class="sec avoid">Everyday Commands — Use on Every Project</div>
+<div class="ev-grid">
+  <div class="ev c1">
+    <div class="ev-cmd">/plan</div><div class="ev-title">Plan Before Coding</div>
+    <div class="ev-desc">Structured phases, dependencies, risk analysis, testing strategy, success criteria. <strong>Waits for approval before any code is written.</strong></div>
+    <div class="ev-ex">/plan Add a REST API for user management with auth</div>
+  </div>
+  <div class="ev c2">
+    <div class="ev-cmd">/tdd</div><div class="ev-title">Test-Driven Development</div>
+    <div class="ev-desc">Writes failing tests first <strong>(RED)</strong>, implements minimal code <strong>(GREEN)</strong>, then refactors. Enforces <strong>80%+ coverage</strong>. JS/TS default.</div>
+    <div class="ev-ex">/tdd Write a utility that parses CSV files with error handling</div>
+  </div>
+  <div class="ev c3">
+    <div class="ev-cmd">/code-review</div><div class="ev-title">Security &amp; Quality Review</div>
+    <div class="ev-desc">Scans staged/unstaged changes. Severity: <span class="badge bc">CRITICAL</span> <span class="badge bh">HIGH</span> <span class="badge bm">MED</span> <span class="badge bl">LOW</span></div>
+    <div class="ev-ex">/code-review</div>
+  </div>
+  <div class="ev c4">
+    <div class="ev-cmd">/build-fix</div><div class="ev-title">Fix Build Errors</div>
+    <div class="ev-desc">Auto-detects build system (npm, cargo, go, gradle, maven…). Incrementally fixes errors with <strong>minimal changes</strong>.</div>
+    <div class="ev-ex">/build-fix</div>
+  </div>
+  <div class="ev c5">
+    <div class="ev-cmd">/e2e</div><div class="ev-title">End-to-End Testing</div>
+    <div class="ev-desc">Generates <strong>Playwright</strong> tests, runs across browsers, captures screenshots / videos / traces.</div>
+    <div class="ev-ex">/e2e Test the complete signup-to-dashboard flow</div>
+  </div>
+  <div class="ev c6">
+    <div class="ev-cmd">/verify</div><div class="ev-title">Pre-Merge Verification</div>
+    <div class="ev-desc">Comprehensive checks: <strong>build · type check · lint · test validation</strong>. Run before every merge.</div>
+    <div class="ev-ex">/verify</div>
+  </div>
+</div>
+
+<!-- Language tables -->
+<div class="sec avoid">Language-Specific Commands</div>
+<div class="g3">
+  <div class="card">
+    <div class="card-hd"><div class="dot" style="background:var(--accent3)"></div>Code Review — By Language</div>
+    <div class="card-bd">
+      <div class="cr"><span class="cmd">/code-review</span><span class="desc"><span class="lang">Any</span>code-reviewer agent</span></div>
+      <div class="cr"><span class="cmd">/python-review</span><span class="desc"><span class="lang">Python</span>python-reviewer</span></div>
+      <div class="cr"><span class="cmd">/cpp-review</span><span class="desc"><span class="lang">C++</span>cpp-reviewer</span></div>
+      <div class="cr"><span class="cmd">/go-review</span><span class="desc"><span class="lang">Go</span>go-reviewer</span></div>
+      <div class="cr"><span class="cmd">/kotlin-review</span><span class="desc"><span class="lang">Kotlin</span>kotlin-reviewer</span></div>
+      <div class="cr"><span class="cmd">/rust-review</span><span class="desc"><span class="lang">Rust</span>rust-reviewer</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="dot" style="background:var(--accent2)"></div>TDD &amp; Testing — By Language</div>
+    <div class="card-bd">
+      <div class="cr"><span class="cmd">/tdd</span><span class="desc"><span class="lang">Any</span>Jest/Vitest default</span></div>
+      <div class="cr"><span class="cmd">/cpp-test</span><span class="desc"><span class="lang">C++</span>GoogleTest + gcov/lcov</span></div>
+      <div class="cr"><span class="cmd">/go-test</span><span class="desc"><span class="lang">Go</span>Table-driven + go test -cover</span></div>
+      <div class="cr"><span class="cmd">/kotlin-test</span><span class="desc"><span class="lang">Kotlin</span>Kotest + Kover</span></div>
+      <div class="cr"><span class="cmd">/rust-test</span><span class="desc"><span class="lang">Rust</span>proptest/rstest + cargo-llvm-cov</span></div>
+      <div class="cr"><span class="cmd">/e2e</span><span class="desc"><span class="lang">Browser</span>Playwright</span></div>
+      <div class="cr"><span class="cmd">/test-coverage</span><span class="desc"><span class="lang">Any</span>Analyze gaps &amp; generate missing tests</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="dot" style="background:var(--accent4)"></div>Build Fix — By Language</div>
+    <div class="card-bd">
+      <div class="cr"><span class="cmd">/build-fix</span><span class="desc"><span class="lang">Any</span>auto-detect build system</span></div>
+      <div class="cr"><span class="cmd">/cpp-build</span><span class="desc"><span class="lang">C++ / CMake</span>cpp-build-resolver</span></div>
+      <div class="cr"><span class="cmd">/go-build</span><span class="desc"><span class="lang">Go</span>go-build-resolver</span></div>
+      <div class="cr"><span class="cmd">/kotlin-build</span><span class="desc"><span class="lang">Kotlin / Gradle</span>kotlin-build-resolver</span></div>
+      <div class="cr"><span class="cmd">/rust-build</span><span class="desc"><span class="lang">Rust / Cargo</span>rust-build-resolver</span></div>
+      <div class="cr"><span class="cmd">/gradle-build</span><span class="desc"><span class="lang">Android / KMP</span>kotlin-build-resolver</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PAGE 2 ═══ -->
+<div class="page-break"></div>
+
+<!-- Planning + Session + Docs -->
+<div class="sec avoid">Planning, Sessions, Docs &amp; More</div>
+<div class="g3" style="margin-bottom:10px">
+  <div class="card">
+    <div class="card-hd"><div class="dot" style="background:var(--accent)"></div>Planning &amp; Optimization</div>
+    <div class="card-bd">
+      <div class="cr"><span class="cmd">/plan</span><span class="desc">Structured plan with phases, risks, testing strategy</span></div>
+      <div class="cr"><span class="cmd">/prompt-optimize</span><span class="desc">Analyze draft prompt → optimized version using ECC components</span></div>
+      <div class="cr"><span class="cmd">/model-route</span><span class="desc">Recommend best model tier (Haiku / Sonnet / Opus) for task complexity</span></div>
+      <div class="cr"><span class="cmd">/context-budget</span><span class="desc">Analyze context window usage, find token optimization opportunities</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="dot" style="background:var(--accent5)"></div>Session Management</div>
+    <div class="card-bd">
+      <div class="cr"><span class="cmd">/save-session</span><span class="desc">Save current context to ~/.claude/session-data/</span></div>
+      <div class="cr"><span class="cmd">/resume-session</span><span class="desc">Load most recent saved session and continue</span></div>
+      <div class="cr"><span class="cmd">/sessions</span><span class="desc">Browse history, create aliases, view metadata</span></div>
+      <div class="cr"><span class="cmd">/checkpoint</span><span class="desc">Create a named checkpoint with git info for later reference</span></div>
+      <div class="cr"><span class="cmd">/aside</span><span class="desc">Ask a quick side question without interrupting current task</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="dot" style="background:var(--accent6)"></div>Docs &amp; Maintenance</div>
+    <div class="card-bd">
+      <div class="cr"><span class="cmd">/docs</span><span class="desc">Look up current library/framework docs via Context7</span></div>
+      <div class="cr"><span class="cmd">/update-docs</span><span class="desc">Sync documentation with codebase changes</span></div>
+      <div class="cr"><span class="cmd">/update-codemaps</span><span class="desc">Generate architecture codemaps from codebase</span></div>
+      <div class="cr"><span class="cmd">/refactor-clean</span><span class="desc">Safely identify &amp; remove dead code with test verification</span></div>
+      <div class="cr"><span class="cmd">/quality-gate</span><span class="desc">Run format + lint + type checks on demand</span></div>
+      <div class="cr"><span class="cmd">/rules-distill</span><span class="desc">Extract cross-cutting principles from skills into rules</span></div>
+      <div class="cr"><span class="cmd">/harness-audit</span><span class="desc">Run deterministic repo audit and return scorecard</span></div>
+    </div>
+  </div>
+
+  <!-- Learning spans 2 cols -->
+  <div class="card sp2">
+    <div class="card-hd"><div class="dot" style="background:#a16207"></div>Learning &amp; Instincts</div>
+    <div class="card-bd">
+      <div class="two-col">
+        <div>
+          <div class="cr"><span class="cmd">/learn</span><span class="desc">Extract reusable patterns from session → save as skills</span></div>
+          <div class="cr"><span class="cmd">/learn-eval</span><span class="desc">Like /learn but self-evaluates quality before saving</span></div>
+          <div class="cr"><span class="cmd">/skill-create</span><span class="desc">Analyze git history → generate SKILL.md files from repo patterns</span></div>
+          <div class="cr"><span class="cmd">/skill-health</span><span class="desc">Show skill portfolio dashboard with success rates &amp; analytics</span></div>
+          <div class="cr"><span class="cmd">/instinct-status</span><span class="desc">Display all learned instincts grouped by domain with confidence scores</span></div>
+          <div class="cr"><span class="cmd">/instinct-export</span><span class="desc">Export instincts to shareable file for team or migration</span></div>
+        </div>
+        <div>
+          <div class="cr"><span class="cmd">/instinct-import</span><span class="desc">Import instincts from file or URL</span></div>
+          <div class="cr"><span class="cmd">/evolve</span><span class="desc">Analyze instincts and suggest evolved skill structures</span></div>
+          <div class="cr"><span class="cmd">/promote</span><span class="desc">Promote project-scoped instincts to global scope</span></div>
+          <div class="cr"><span class="cmd">/prune</span><span class="desc">Delete expired pending instincts (&gt;30 days, never promoted)</span></div>
+          <div class="cr"><span class="cmd">/projects</span><span class="desc">List known projects with instinct/observation counts</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Multi-agent spans 2 cols -->
+  <div class="card sp2">
+    <div class="card-hd"><div class="dot" style="background:var(--accent)"></div>Multi-Agent Orchestration</div>
+    <div class="card-bd">
+      <div class="two-col">
+        <div>
+          <div class="cr"><span class="cmd">/orchestrate</span><span class="desc">Sequential agents: plan → tdd → review → security</span></div>
+          <div class="cr"><span class="cmd">/multi-workflow</span><span class="desc">Full 6-phase multi-model development workflow</span></div>
+          <div class="cr"><span class="cmd">/multi-plan</span><span class="desc">Multi-model planning phase</span></div>
+          <div class="cr"><span class="cmd">/multi-execute</span><span class="desc">Multi-model execution phase</span></div>
+          <div class="cr"><span class="cmd">/multi-backend</span><span class="desc">Backend-focused multi-model workflow</span></div>
+        </div>
+        <div>
+          <div class="cr"><span class="cmd">/multi-frontend</span><span class="desc">Frontend-focused multi-model workflow</span></div>
+          <div class="cr"><span class="cmd">/devfleet</span><span class="desc">Parallel agents in isolated git worktrees</span></div>
+          <div class="cr"><span class="cmd">/loop-start</span><span class="desc">Start autonomous agent loop with safety controls</span></div>
+          <div class="cr"><span class="cmd">/loop-status</span><span class="desc">Inspect loop state, progress, and failure signals</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup fits in 1 col -->
+  <div class="card">
+    <div class="card-hd"><div class="dot" style="background:var(--accent3)"></div>Setup &amp; Utilities</div>
+    <div class="card-bd">
+      <div class="cr"><span class="cmd">/setup-pm</span><span class="desc">Configure preferred package manager (npm / pnpm / yarn / bun)</span></div>
+      <div class="cr"><span class="cmd">/pm2</span><span class="desc">Auto-analyze project and generate PM2 service commands</span></div>
+      <div class="cr"><span class="cmd">/claw</span><span class="desc">Start NanoClaw — persistent REPL with model routing &amp; branching</span></div>
+      <div class="cr"><span class="cmd">/eval</span><span class="desc">Manage eval-driven development workflows</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Workflows -->
+<div class="sec avoid">Recommended Workflows</div>
+<div class="wf-grid">
+  <div class="wf">
+    <div class="wf-title">🚀 Feature Development</div>
+    <div class="ws"><div class="sn">1</div><div><div class="sc">/plan Add feature X</div><div class="sn2">plan it, then approve</div></div></div>
+    <div class="ws"><div class="sn">2</div><div><div class="sc">/tdd</div><div class="sn2">implement with tests</div></div></div>
+    <div class="ws"><div class="sn">3</div><div><div class="sc">/code-review</div><div class="sn2">review before commit</div></div></div>
+    <div class="ws"><div class="sn">4</div><div><div class="sc">git commit</div><div class="sn2">ship it</div></div></div>
+  </div>
+  <div class="wf">
+    <div class="wf-title">🐛 Bug Fix</div>
+    <div class="ws"><div class="sn">1</div><div><div class="sc">/tdd Fix the race condition…</div><div class="sn2">test-drive the fix</div></div></div>
+    <div class="ws"><div class="sn">2</div><div><div class="sc">/build-fix</div><div class="sn2">if build breaks</div></div></div>
+    <div class="ws"><div class="sn">3</div><div><div class="sc">/verify</div><div class="sn2">confirm everything passes</div></div></div>
+    <div class="ws"><div class="sn">4</div><div><div class="sc">git commit</div><div class="sn2">done</div></div></div>
+  </div>
+  <div class="wf">
+    <div class="wf-title">💾 Session Bookmarks</div>
+    <div class="ws"><div class="sn">1</div><div><div class="sc">/save-session</div><div class="sn2">bookmark your progress</div></div></div>
+    <div class="ws"><div class="sn">2</div><div><div class="sc">/learn</div><div class="sn2">extract patterns for next time</div></div></div>
+    <div style="height:5px"></div>
+    <div class="wf-title">▶️ Start of Session</div>
+    <div class="ws"><div class="sn">1</div><div><div class="sc">/resume-session</div><div class="sn2">pick up where you left off</div></div></div>
+  </div>
+  <div class="wf">
+    <div class="wf-title">🚢 Pre-Deployment</div>
+    <div class="ws"><div class="sn">1</div><div><div class="sc">/code-review</div><div class="sn2">security + quality scan</div></div></div>
+    <div class="ws"><div class="sn">2</div><div><div class="sc">/e2e</div><div class="sn2">end-to-end test critical flows</div></div></div>
+    <div class="ws"><div class="sn">3</div><div><div class="sc">/verify</div><div class="sn2">full build + lint + type check</div></div></div>
+    <div class="ws"><div class="sn">4</div><div><div class="sc">/quality-gate</div><div class="sn2">format + lint final pass</div></div></div>
+  </div>
+</div>
+
+</body>
+</html>
