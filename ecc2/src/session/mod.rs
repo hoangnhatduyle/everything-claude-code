@@ -14,6 +14,7 @@ pub struct Session {
     pub id: String,
     pub task: String,
     pub agent_type: String,
+    pub working_dir: PathBuf,
     pub state: SessionState,
     pub pid: Option<u32>,
     pub worktree: Option<WorktreeInfo>,
@@ -94,9 +95,22 @@ pub struct WorktreeInfo {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SessionMetrics {
+    pub input_tokens: u64,
+    pub output_tokens: u64,
     pub tokens_used: u64,
     pub tool_calls: u64,
     pub files_changed: u32,
     pub duration_secs: u64,
     pub cost_usd: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionMessage {
+    pub id: i64,
+    pub from_session: String,
+    pub to_session: String,
+    pub content: String,
+    pub msg_type: String,
+    pub read: bool,
+    pub timestamp: DateTime<Utc>,
 }
