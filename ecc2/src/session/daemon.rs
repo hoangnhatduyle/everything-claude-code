@@ -22,10 +22,8 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
     resume_crashed_sessions(&db)?;
 
     let heartbeat_interval = Duration::from_secs(cfg.heartbeat_interval_secs);
-    let timeout = Duration::from_secs(cfg.session_timeout_secs);
-
     loop {
-        if let Err(e) = check_sessions(&db, timeout) {
+        if let Err(e) = check_sessions(&db, &cfg) {
             tracing::error!("Session check failed: {e}");
         }
 
@@ -37,8 +35,12 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
             tracing::error!("Worktree auto-merge pass failed: {e}");
         }
 
-        if let Err(e) = maybe_auto_prune_inactive_worktrees(&db).await {
+        if let Err(e) = maybe_auto_prune_inactive_worktrees(&db, &cfg).await {
             tracing::error!("Worktree auto-prune pass failed: {e}");
+        }
+
+        if let Err(e) = manager::activate_pending_worktree_sessions(&db, &cfg).await {
+            tracing::error!("Queued worktree activation pass failed: {e}");
         }
 
         time::sleep(heartbeat_interval).await;
@@ -82,25 +84,8 @@ where
     Ok(failed_sessions)
 }
 
-fn check_sessions(db: &StateStore, timeout: Duration) -> Result<()> {
-    let sessions = db.list_sessions()?;
-
-    for session in sessions {
-        if session.state != SessionState::Running {
-            continue;
-        }
-
-        let elapsed = chrono::Utc::now()
-            .signed_duration_since(session.updated_at)
-            .to_std()
-            .unwrap_or(Duration::ZERO);
-
-        if elapsed > timeout {
-            tracing::warn!("Session {} timed out after {:?}", session.id, elapsed);
-            db.update_state_and_pid(&session.id, &SessionState::Failed, None)?;
-        }
-    }
-
+fn check_sessions(db: &StateStore, cfg: &Config) -> Result<()> {
+    let _ = manager::enforce_session_heartbeats(db, cfg)?;
     Ok(())
 }
 
@@ -408,9 +393,9 @@ where
     Ok(merged)
 }
 
-async fn maybe_auto_prune_inactive_worktrees(db: &StateStore) -> Result<usize> {
+async fn maybe_auto_prune_inactive_worktrees(db: &StateStore, cfg: &Config) -> Result<usize> {
     maybe_auto_prune_inactive_worktrees_with_recorder(
-        || manager::prune_inactive_worktrees(db),
+        || manager::prune_inactive_worktrees(db, cfg),
         |pruned, active| db.record_daemon_auto_prune_pass(pruned, active),
     )
     .await
@@ -436,6 +421,7 @@ where
     let outcome = prune().await?;
     let pruned = outcome.cleaned_session_ids.len();
     let active = outcome.active_with_worktree_ids.len();
+    let retained = outcome.retained_session_ids.len();
     record(pruned, active)?;
 
     if pruned > 0 {
@@ -443,6 +429,9 @@ where
     }
     if active > 0 {
         tracing::info!("Skipped {active} active worktree(s) during auto-prune");
+    }
+    if retained > 0 {
+        tracing::info!("Deferred {retained} inactive worktree(s) within retention");
     }
 
     Ok(pruned)
@@ -498,6 +487,7 @@ mod tests {
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         }
     }
@@ -1269,6 +1259,7 @@ mod tests {
                 Ok(manager::WorktreePruneOutcome {
                     cleaned_session_ids: vec!["stopped-a".to_string(), "stopped-b".to_string()],
                     active_with_worktree_ids: vec!["running-a".to_string()],
+                    retained_session_ids: vec!["retained-a".to_string()],
                 })
             },
             move |pruned, active| {

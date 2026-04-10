@@ -68,6 +68,58 @@ pub fn get_team_status(db: &StateStore, id: &str, depth: usize) -> Result<TeamSt
     })
 }
 
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct HeartbeatEnforcementOutcome {
+    pub stale_sessions: Vec<String>,
+    pub auto_terminated_sessions: Vec<String>,
+}
+
+pub fn enforce_session_heartbeats(
+    db: &StateStore,
+    cfg: &Config,
+) -> Result<HeartbeatEnforcementOutcome> {
+    enforce_session_heartbeats_with(db, cfg, kill_process)
+}
+
+fn enforce_session_heartbeats_with<F>(
+    db: &StateStore,
+    cfg: &Config,
+    terminate_pid: F,
+) -> Result<HeartbeatEnforcementOutcome>
+where
+    F: Fn(u32) -> Result<()>,
+{
+    let timeout = chrono::Duration::seconds(cfg.session_timeout_secs as i64);
+    let now = chrono::Utc::now();
+    let mut outcome = HeartbeatEnforcementOutcome::default();
+
+    for session in db.list_sessions()? {
+        if !matches!(session.state, SessionState::Running | SessionState::Stale) {
+            continue;
+        }
+
+        if now.signed_duration_since(session.last_heartbeat_at) <= timeout {
+            continue;
+        }
+
+        if cfg.auto_terminate_stale_sessions {
+            if let Some(pid) = session.pid {
+                let _ = terminate_pid(pid);
+            }
+            db.update_state_and_pid(&session.id, &SessionState::Failed, None)?;
+            outcome.auto_terminated_sessions.push(session.id);
+            continue;
+        }
+
+        if session.state != SessionState::Stale {
+            db.update_state(&session.id, &SessionState::Stale)?;
+            outcome.stale_sessions.push(session.id);
+        }
+    }
+
+    Ok(outcome)
+}
+
 pub async fn assign_session(
     db: &StateStore,
     cfg: &Config,
@@ -685,7 +737,7 @@ pub async fn merge_session_worktree(
 
     if matches!(
         session.state,
-        SessionState::Pending | SessionState::Running | SessionState::Idle
+        SessionState::Pending | SessionState::Running | SessionState::Idle | SessionState::Stale
     ) {
         anyhow::bail!(
             "Cannot merge active session {} while it is {}",
@@ -747,7 +799,10 @@ pub async fn merge_ready_worktrees(
 
         if matches!(
             session.state,
-            SessionState::Pending | SessionState::Running | SessionState::Idle
+            SessionState::Pending
+                | SessionState::Running
+                | SessionState::Idle
+                | SessionState::Stale
         ) {
             active_with_worktree_ids.push(session.id);
             continue;
@@ -807,12 +862,19 @@ pub async fn merge_ready_worktrees(
 pub struct WorktreePruneOutcome {
     pub cleaned_session_ids: Vec<String>,
     pub active_with_worktree_ids: Vec<String>,
+    pub retained_session_ids: Vec<String>,
 }
 
-pub async fn prune_inactive_worktrees(db: &StateStore) -> Result<WorktreePruneOutcome> {
+pub async fn prune_inactive_worktrees(
+    db: &StateStore,
+    cfg: &Config,
+) -> Result<WorktreePruneOutcome> {
     let sessions = db.list_sessions()?;
     let mut cleaned_session_ids = Vec::new();
     let mut active_with_worktree_ids = Vec::new();
+    let mut retained_session_ids = Vec::new();
+    let retention = chrono::Duration::seconds(cfg.worktree_retention_secs as i64);
+    let now = chrono::Utc::now();
 
     for session in sessions {
         let Some(_) = session.worktree.as_ref() else {
@@ -827,6 +889,13 @@ pub async fn prune_inactive_worktrees(db: &StateStore) -> Result<WorktreePruneOu
             continue;
         }
 
+        if retention > chrono::Duration::zero()
+            && now.signed_duration_since(session.last_heartbeat_at) < retention
+        {
+            retained_session_ids.push(session.id);
+            continue;
+        }
+
         cleanup_session_worktree(db, &session.id).await?;
         cleaned_session_ids.push(session.id);
     }
@@ -834,6 +903,7 @@ pub async fn prune_inactive_worktrees(db: &StateStore) -> Result<WorktreePruneOu
     Ok(WorktreePruneOutcome {
         cleaned_session_ids,
         active_with_worktree_ids,
+        retained_session_ids,
     })
 }
 
@@ -902,9 +972,118 @@ pub async fn run_session(
         session_id.to_string(),
         command,
         SessionOutputStore::default(),
+        std::time::Duration::from_secs(cfg.heartbeat_interval_secs),
     )
     .await?;
     Ok(())
+}
+
+pub async fn activate_pending_worktree_sessions(
+    db: &StateStore,
+    cfg: &Config,
+) -> Result<Vec<String>> {
+    activate_pending_worktree_sessions_with(
+        db,
+        cfg,
+        |cfg, session_id, task, agent_type, cwd| async move {
+            tokio::spawn(async move {
+                if let Err(error) = run_session(&cfg, &session_id, &task, &agent_type, &cwd).await {
+                    tracing::error!(
+                        "Failed to start queued worktree session {}: {error}",
+                        session_id
+                    );
+                }
+            });
+            Ok(())
+        },
+    )
+    .await
+}
+
+async fn activate_pending_worktree_sessions_with<F, Fut>(
+    db: &StateStore,
+    cfg: &Config,
+    spawn: F,
+) -> Result<Vec<String>>
+where
+    F: Fn(Config, String, String, String, PathBuf) -> Fut,
+    Fut: std::future::Future<Output = Result<()>>,
+{
+    let mut available_slots = cfg
+        .max_parallel_worktrees
+        .saturating_sub(attached_worktree_count(db)?);
+    if available_slots == 0 {
+        return Ok(Vec::new());
+    }
+
+    let mut started = Vec::new();
+    for request in db.pending_worktree_queue(available_slots)? {
+        let Some(session) = db.get_session(&request.session_id)? else {
+            db.dequeue_pending_worktree(&request.session_id)?;
+            continue;
+        };
+
+        if session.worktree.is_some()
+            || session.pid.is_some()
+            || session.state != SessionState::Pending
+        {
+            db.dequeue_pending_worktree(&session.id)?;
+            continue;
+        }
+
+        let worktree =
+            match worktree::create_for_session_in_repo(&session.id, cfg, &request.repo_root) {
+                Ok(worktree) => worktree,
+                Err(error) => {
+                    db.dequeue_pending_worktree(&session.id)?;
+                    db.update_state(&session.id, &SessionState::Failed)?;
+                    tracing::warn!(
+                        "Failed to create queued worktree for session {}: {error}",
+                        session.id
+                    );
+                    continue;
+                }
+            };
+
+        if let Err(error) = db.attach_worktree(&session.id, &worktree) {
+            let _ = worktree::remove(&worktree);
+            db.dequeue_pending_worktree(&session.id)?;
+            db.update_state(&session.id, &SessionState::Failed)?;
+            return Err(error.context(format!(
+                "Failed to attach queued worktree for session {}",
+                session.id
+            )));
+        }
+
+        if let Err(error) = spawn(
+            cfg.clone(),
+            session.id.clone(),
+            session.task.clone(),
+            session.agent_type.clone(),
+            worktree.path.clone(),
+        )
+        .await
+        {
+            let _ = worktree::remove(&worktree);
+            let _ = db.clear_worktree_to_dir(&session.id, &request.repo_root);
+            db.dequeue_pending_worktree(&session.id)?;
+            db.update_state(&session.id, &SessionState::Failed)?;
+            tracing::warn!(
+                "Failed to start queued worktree session {}: {error}",
+                session.id
+            );
+            continue;
+        }
+
+        db.dequeue_pending_worktree(&session.id)?;
+        started.push(session.id);
+        available_slots = available_slots.saturating_sub(1);
+        if available_slots == 0 {
+            break;
+        }
+    }
+
+    Ok(started)
 }
 
 async fn queue_session_in_dir(
@@ -936,8 +1115,13 @@ async fn queue_session_in_dir_with_runner_program(
     repo_root: &Path,
     runner_program: &Path,
 ) -> Result<String> {
-    let session = build_session_record(task, agent_type, use_worktree, cfg, repo_root)?;
+    let session = build_session_record(db, task, agent_type, use_worktree, cfg, repo_root)?;
     db.insert_session(&session)?;
+
+    if use_worktree && session.worktree.is_none() {
+        db.enqueue_pending_worktree(&session.id, repo_root)?;
+        return Ok(session.id);
+    }
 
     let working_dir = session
         .worktree
@@ -968,6 +1152,7 @@ async fn queue_session_in_dir_with_runner_program(
 }
 
 fn build_session_record(
+    db: &StateStore,
     task: &str,
     agent_type: &str,
     use_worktree: bool,
@@ -977,7 +1162,7 @@ fn build_session_record(
     let id = uuid::Uuid::new_v4().to_string()[..8].to_string();
     let now = chrono::Utc::now();
 
-    let worktree = if use_worktree {
+    let worktree = if use_worktree && attached_worktree_count(db)? < cfg.max_parallel_worktrees {
         Some(worktree::create_for_session_in_repo(&id, cfg, repo_root)?)
     } else {
         None
@@ -997,6 +1182,7 @@ fn build_session_record(
         worktree,
         created_at: now,
         updated_at: now,
+        last_heartbeat_at: now,
         metrics: SessionMetrics::default(),
     })
 }
@@ -1010,9 +1196,14 @@ async fn create_session_in_dir(
     repo_root: &Path,
     agent_program: &Path,
 ) -> Result<String> {
-    let session = build_session_record(task, agent_type, use_worktree, cfg, repo_root)?;
+    let session = build_session_record(db, task, agent_type, use_worktree, cfg, repo_root)?;
 
     db.insert_session(&session)?;
+
+    if use_worktree && session.worktree.is_none() {
+        db.enqueue_pending_worktree(&session.id, repo_root)?;
+        return Ok(session.id);
+    }
 
     let working_dir = session
         .worktree
@@ -1036,6 +1227,14 @@ async fn create_session_in_dir(
             Err(error.context(format!("Failed to start session {}", session.id)))
         }
     }
+}
+
+fn attached_worktree_count(db: &StateStore) -> Result<usize> {
+    Ok(db
+        .list_sessions()?
+        .into_iter()
+        .filter(|session| session.worktree.is_some())
+        .count())
 }
 
 async fn spawn_session_runner(
@@ -1239,6 +1438,7 @@ fn stop_session_recorded(db: &StateStore, session: &Session, cleanup_worktree: b
     if cleanup_worktree {
         if let Some(worktree) = session.worktree.as_ref() {
             crate::worktree::remove(worktree)?;
+            db.clear_worktree_to_dir(&session.id, &session.working_dir)?;
         }
     }
 
@@ -1488,6 +1688,15 @@ impl fmt::Display for SessionStatus {
         writeln!(f, "Tools:   {}", s.metrics.tool_calls)?;
         writeln!(f, "Files:   {}", s.metrics.files_changed)?;
         writeln!(f, "Cost:    ${:.4}", s.metrics.cost_usd)?;
+        writeln!(
+            f,
+            "Heartbeat: {} ({}s ago)",
+            s.last_heartbeat_at,
+            chrono::Utc::now()
+                .signed_duration_since(s.last_heartbeat_at)
+                .num_seconds()
+                .max(0)
+        )?;
         if !self.delegated_children.is_empty() {
             writeln!(f, "Children: {}", self.delegated_children.join(", "))?;
         }
@@ -1528,6 +1737,7 @@ impl fmt::Display for TeamStatus {
         for lane in [
             "Running",
             "Idle",
+            "Stale",
             "Pending",
             "Failed",
             "Stopped",
@@ -1676,6 +1886,7 @@ fn session_state_label(state: &SessionState) -> &'static str {
         SessionState::Pending => "Pending",
         SessionState::Running => "Running",
         SessionState::Idle => "Idle",
+        SessionState::Stale => "Stale",
         SessionState::Completed => "Completed",
         SessionState::Failed => "Failed",
         SessionState::Stopped => "Stopped",
@@ -1723,10 +1934,13 @@ mod tests {
         Config {
             db_path: root.join("state.db"),
             worktree_root: root.join("worktrees"),
+            worktree_branch_prefix: "ecc".to_string(),
             max_parallel_sessions: 4,
             max_parallel_worktrees: 4,
+            worktree_retention_secs: 0,
             session_timeout_secs: 60,
             heartbeat_interval_secs: 5,
+            auto_terminate_stale_sessions: false,
             default_agent: "claude".to_string(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
@@ -1755,8 +1969,83 @@ mod tests {
             worktree: None,
             created_at: updated_at - Duration::minutes(1),
             updated_at,
+            last_heartbeat_at: updated_at,
             metrics: SessionMetrics::default(),
         }
+    }
+
+    #[test]
+    fn enforce_session_heartbeats_marks_overdue_running_sessions_stale() -> Result<()> {
+        let tempdir = TestDir::new("manager-heartbeat-stale")?;
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "stale-1".to_string(),
+            task: "heartbeat overdue".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: Some(4242),
+            worktree: None,
+            created_at: now - Duration::minutes(5),
+            updated_at: now - Duration::minutes(5),
+            last_heartbeat_at: now - Duration::minutes(5),
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let outcome = enforce_session_heartbeats(&db, &cfg)?;
+        let session = db.get_session("stale-1")?.expect("session should exist");
+
+        assert_eq!(outcome.stale_sessions, vec!["stale-1".to_string()]);
+        assert!(outcome.auto_terminated_sessions.is_empty());
+        assert_eq!(session.state, SessionState::Stale);
+        assert_eq!(session.pid, Some(4242));
+
+        Ok(())
+    }
+
+    #[test]
+    fn enforce_session_heartbeats_auto_terminates_when_enabled() -> Result<()> {
+        let tempdir = TestDir::new("manager-heartbeat-terminate")?;
+        let mut cfg = build_config(tempdir.path());
+        cfg.auto_terminate_stale_sessions = true;
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+        let killed = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let killed_clone = killed.clone();
+
+        db.insert_session(&Session {
+            id: "stale-2".to_string(),
+            task: "terminate overdue".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: Some(7777),
+            worktree: None,
+            created_at: now - Duration::minutes(5),
+            updated_at: now - Duration::minutes(5),
+            last_heartbeat_at: now - Duration::minutes(5),
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let outcome = enforce_session_heartbeats_with(&db, &cfg, move |pid| {
+            killed_clone.lock().unwrap().push(pid);
+            Ok(())
+        })?;
+        let session = db.get_session("stale-2")?.expect("session should exist");
+
+        assert!(outcome.stale_sessions.is_empty());
+        assert_eq!(
+            outcome.auto_terminated_sessions,
+            vec!["stale-2".to_string()]
+        );
+        assert_eq!(*killed.lock().unwrap(), vec![7777]);
+        assert_eq!(session.state, SessionState::Failed);
+        assert_eq!(session.pid, None);
+
+        Ok(())
     }
 
     fn build_daemon_activity() -> super::super::store::DaemonActivity {
@@ -1950,6 +2239,131 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test(flavor = "current_thread")]
+    async fn create_session_with_worktree_limit_queues_without_starting_runner() -> Result<()> {
+        let tempdir = TestDir::new("manager-worktree-limit-queue")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.max_parallel_worktrees = 1;
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_claude, log_path) = write_fake_claude(tempdir.path())?;
+
+        let first_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "active worktree",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+        let second_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "queued worktree",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+
+        let first = db
+            .get_session(&first_id)?
+            .context("first session missing")?;
+        assert_eq!(first.state, SessionState::Running);
+        assert!(first.worktree.is_some());
+
+        let second = db
+            .get_session(&second_id)?
+            .context("second session missing")?;
+        assert_eq!(second.state, SessionState::Pending);
+        assert!(second.pid.is_none());
+        assert!(second.worktree.is_none());
+        assert!(db.pending_worktree_queue_contains(&second_id)?);
+
+        let log = wait_for_file(&log_path)?;
+        assert!(log.contains("active worktree"));
+        assert!(!log.contains("queued worktree"));
+
+        stop_session_with_options(&db, &first_id, true).await?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn activate_pending_worktree_sessions_starts_queued_session_when_slot_opens() -> Result<()>
+    {
+        let tempdir = TestDir::new("manager-worktree-limit-activate")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.max_parallel_worktrees = 1;
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_claude, _) = write_fake_claude(tempdir.path())?;
+
+        let first_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "active worktree",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+        let second_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "queued worktree",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+
+        stop_session_with_options(&db, &first_id, true).await?;
+
+        let launch_log = tempdir.path().join("queued-launch.log");
+        let started =
+            activate_pending_worktree_sessions_with(&db, &cfg, |_, session_id, task, _, cwd| {
+                let launch_log = launch_log.clone();
+                async move {
+                    fs::write(
+                        &launch_log,
+                        format!("{session_id}\n{task}\n{}\n", cwd.display()),
+                    )?;
+                    Ok(())
+                }
+            })
+            .await?;
+
+        assert_eq!(started, vec![second_id.clone()]);
+        assert!(!db.pending_worktree_queue_contains(&second_id)?);
+
+        let second = db
+            .get_session(&second_id)?
+            .context("queued session missing")?;
+        let worktree = second
+            .worktree
+            .context("queued session should gain worktree")?;
+        assert_eq!(second.state, SessionState::Pending);
+        assert!(worktree.path.exists());
+
+        let launch = fs::read_to_string(&launch_log)?;
+        assert!(launch.contains(&second_id));
+        assert!(launch.contains("queued worktree"));
+        assert!(launch.contains(worktree.path.to_string_lossy().as_ref()));
+
+        crate::worktree::remove(&worktree)?;
+        db.clear_worktree_to_dir(&second_id, &repo_root)?;
+        Ok(())
+    }
+
     #[test]
     fn enforce_budget_hard_limits_stops_active_sessions_without_cleaning_worktrees() -> Result<()> {
         let tempdir = TestDir::new("manager-budget-pause")?;
@@ -1976,6 +2390,7 @@ mod tests {
             }),
             created_at: now - Duration::minutes(1),
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
         db.update_metrics(
@@ -2032,6 +2447,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(1),
+            last_heartbeat_at: now - Duration::minutes(1),
             metrics: SessionMetrics::default(),
         })?;
         db.update_metrics(
@@ -2076,6 +2492,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(1),
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -2206,10 +2623,11 @@ mod tests {
             .context("stopped session worktree missing")?
             .path;
 
-        let outcome = prune_inactive_worktrees(&db).await?;
+        let outcome = prune_inactive_worktrees(&db, &cfg).await?;
 
         assert_eq!(outcome.cleaned_session_ids, vec![stopped_id.clone()]);
         assert_eq!(outcome.active_with_worktree_ids, vec![active_id.clone()]);
+        assert!(outcome.retained_session_ids.is_empty());
         assert!(active_path.exists(), "active worktree should remain");
         assert!(!stopped_path.exists(), "stopped worktree should be removed");
 
@@ -2228,6 +2646,64 @@ mod tests {
             stopped_after.worktree.is_none(),
             "stopped session worktree metadata should be cleared"
         );
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn prune_inactive_worktrees_defers_recent_sessions_within_retention() -> Result<()> {
+        let tempdir = TestDir::new("manager-prune-worktree-retention")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.worktree_retention_secs = 3600;
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_claude, _) = write_fake_claude(tempdir.path())?;
+
+        let session_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "recently completed worktree",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+
+        stop_session_with_options(&db, &session_id, false).await?;
+
+        let before = db
+            .get_session(&session_id)?
+            .context("retained session should exist")?;
+        let worktree_path = before
+            .worktree
+            .clone()
+            .context("retained session worktree missing")?
+            .path;
+
+        let outcome = prune_inactive_worktrees(&db, &cfg).await?;
+
+        assert!(outcome.cleaned_session_ids.is_empty());
+        assert!(outcome.active_with_worktree_ids.is_empty());
+        assert_eq!(outcome.retained_session_ids, vec![session_id.clone()]);
+        assert!(worktree_path.exists(), "retained worktree should remain");
+        assert!(
+            db.get_session(&session_id)?
+                .context("retained session should still exist")?
+                .worktree
+                .is_some(),
+            "retained session should keep worktree metadata"
+        );
+
+        crate::worktree::remove(
+            &db.get_session(&session_id)?
+                .context("retained session should still exist")?
+                .worktree
+                .context("retained session should still have worktree")?,
+        )?;
+        db.clear_worktree_to_dir(&session_id, &repo_root)?;
 
         Ok(())
     }
@@ -2328,6 +2804,7 @@ mod tests {
             worktree: Some(merged_worktree.clone()),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -2343,6 +2820,7 @@ mod tests {
             worktree: Some(active_worktree.clone()),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -2359,6 +2837,7 @@ mod tests {
             worktree: Some(dirty_worktree.clone()),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -2584,6 +3063,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2596,6 +3076,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(1),
             updated_at: now - Duration::minutes(1),
+            last_heartbeat_at: now - Duration::minutes(1),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -2651,6 +3132,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2663,6 +3145,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -2727,6 +3210,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2739,6 +3223,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -2794,6 +3279,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2806,6 +3292,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -2865,6 +3352,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2877,6 +3365,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -2930,6 +3419,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
 
@@ -2977,6 +3467,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2989,6 +3480,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -3044,6 +3536,7 @@ mod tests {
                 worktree: None,
                 created_at: now - Duration::minutes(3),
                 updated_at: now - Duration::minutes(3),
+                last_heartbeat_at: now - Duration::minutes(3),
                 metrics: SessionMetrics::default(),
             })?;
         }
@@ -3103,6 +3596,7 @@ mod tests {
                 worktree: None,
                 created_at: now - Duration::minutes(3),
                 updated_at: now - Duration::minutes(3),
+                last_heartbeat_at: now - Duration::minutes(3),
                 metrics: SessionMetrics::default(),
             })?;
         }
@@ -3154,6 +3648,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
 
@@ -3167,6 +3662,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
 
@@ -3222,6 +3718,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(4),
             updated_at: now - Duration::minutes(4),
+            last_heartbeat_at: now - Duration::minutes(4),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -3234,6 +3731,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -3246,6 +3744,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
 
@@ -3307,6 +3806,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(4),
             updated_at: now - Duration::minutes(4),
+            last_heartbeat_at: now - Duration::minutes(4),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -3319,6 +3819,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
 
