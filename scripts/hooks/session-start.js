@@ -449,6 +449,21 @@ async function main() {
     log('[SessionStart] No specific project type detected');
   }
 
+  // Inject pre-compaction state snapshot if present and recent (< 1 hour old)
+  try {
+    const compactStatePath = path.join(getSessionsDir(), 'compact-state.md');
+    if (fs.existsSync(compactStatePath)) {
+      const age = Date.now() - fs.statSync(compactStatePath).mtimeMs;
+      if (age < 60 * 60 * 1000) {
+        const compactState = fs.readFileSync(compactStatePath, 'utf8');
+        additionalContextParts.push('---\n## Pre-Compaction State\n' + compactState);
+        log('[SessionStart] Loaded pre-compaction state snapshot');
+      }
+    }
+  } catch {
+    // Non-critical — never block session start
+  }
+
   await writeSessionStartPayload(additionalContextParts.join('\n\n'));
 }
 
