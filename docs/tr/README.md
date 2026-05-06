@@ -79,7 +79,7 @@ Bu repository yalnızca ham kodu içerir. Rehberler her şeyi açıklıyor.
 
 ## Yenilikler
 
-### v1.10.0 — Surface Sync, Operatör İş Akışları ve ECC 2.0 Alpha (Nis 2026)
+### v2.0.0-rc.1 — Surface Sync, Operatör İş Akışları ve ECC 2.0 Alpha (Nis 2026)
 
 - **Public surface canlı repo ile senkronlandı** — metadata, katalog sayıları, plugin manifest'leri ve kurulum odaklı dokümanlar artık gerçek OSS yüzeyiyle eşleşiyor.
 - **Operatör ve dışa dönük iş akışları büyüdü** — `brand-voice`, `social-graph-ranker`, `customer-billing-ops`, `google-workspace-ops` ve ilgili operatör skill'leri aynı sistem içinde tamamlandı.
@@ -125,7 +125,7 @@ Bu repository yalnızca ham kodu içerir. Rehberler her şeyi açıklıyor.
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Plugin'i kur
-/plugin install ecc@ecc
+/plugin install everything-claude-code
 ```
 
 ### Adım 2: Rule'ları Kurun (Gerekli)
@@ -164,13 +164,13 @@ Manuel kurulum talimatları için `rules/` klasöründeki README'ye bakın.
 
 ```bash
 # Bir command deneyin (plugin kurulumu namespace'li form kullanır)
-/ecc:plan "Kullanıcı kimlik doğrulaması ekle"
+/everything-claude-code:plan "Kullanıcı kimlik doğrulaması ekle"
 
 # Manuel kurulum (Seçenek 2) daha kısa formu kullanır:
 # /plan "Kullanıcı kimlik doğrulaması ekle"
 
 # Mevcut command'ları kontrol edin
-/plugin list ecc@ecc
+/plugin list everything-claude-code@everything-claude-code
 ```
 
 **Bu kadar!** Artık 28 agent, 116 skill ve 59 command'a erişiminiz var.
@@ -308,8 +308,8 @@ Nereden başlayacağınızdan emin değil misiniz? Bu hızlı referansı kullan�
 
 | Yapmak istediğim... | Bu command'ı kullan | Kullanılan agent |
 |---------------------|---------------------|------------------|
-| Yeni bir feature planla | `/ecc:plan "Auth ekle"` | planner |
-| Sistem mimarisi tasarla | `/ecc:plan` + architect agent | architect |
+| Yeni bir feature planla | `/everything-claude-code:plan "Auth ekle"` | planner |
+| Sistem mimarisi tasarla | `/everything-claude-code:plan` + architect agent | architect |
 | Önce testlerle kod yaz | `/tdd` | tdd-guide |
 | Yazdığım kodu incele | `/code-review` | code-reviewer |
 | Başarısız bir build'i düzelt | `/build-fix` | build-error-resolver |
@@ -324,7 +324,7 @@ Nereden başlayacağınızdan emin değil misiniz? Bu hızlı referansı kullan�
 
 **Yeni bir feature başlatma:**
 ```
-/ecc:plan "OAuth ile kullanıcı kimlik doğrulaması ekle"
+/everything-claude-code:plan "OAuth ile kullanıcı kimlik doğrulaması ekle"
                                               → planner implementasyon planı oluşturur
 /tdd                                          → tdd-guide önce-test-yaz'ı zorunlu kılar
 /code-review                                  → code-reviewer çalışmanızı kontrol eder
@@ -352,7 +352,7 @@ Nereden başlayacağınızdan emin değil misiniz? Bu hızlı referansı kullan�
 <summary><b>Hangi agent/command'ların kurulu olduğunu nasıl kontrol ederim?</b></summary>
 
 ```bash
-/plugin list ecc@ecc
+/plugin list everything-claude-code@everything-claude-code
 ```
 
 Bu, plugin'den mevcut tüm agent'ları, command'ları ve skill'leri gösterir.

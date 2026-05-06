@@ -70,7 +70,7 @@
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # 安裝外掛程式
-/plugin install ecc@ecc
+/plugin install everything-claude-code
 ```
 
 ### 第二步：安裝規則（必需）
@@ -89,13 +89,13 @@ cp -r everything-claude-code/rules/* ~/.claude/rules/
 
 ```bash
 # 嘗試一個指令（外掛安裝使用命名空間形式）
-/ecc:plan "新增使用者認證"
+/everything-claude-code:plan "新增使用者認證"
 
 # 手動安裝（選項2）使用簡短形式：
 # /plan "新增使用者認證"
 
 # 查看可用指令
-/plugin list ecc@ecc
+/plugin list everything-claude-code@everything-claude-code
 ```
 
 **完成！** 您現在使用 15+ 代理程式、30+ 技能和 20+ 指令。
@@ -270,7 +270,7 @@ everything-claude-code/
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # 安裝外掛程式
-/plugin install ecc@ecc
+/plugin install everything-claude-code
 ```
 
 或直接新增到您的 `~/.claude/settings.json`：
@@ -286,7 +286,7 @@ everything-claude-code/
     }
   },
   "enabledPlugins": {
-    "ecc@ecc": true
+    "everything-claude-code@everything-claude-code": true
   }
 }
 ```
