@@ -39,13 +39,13 @@ origin: ECC
 
 | フレームワーク | AutomationId | 信頼性 | 注記 |
 |-----------|-------------|-------------|-------|
-| WPF | ★★★★★ | 優秀 | `x:Name` が直接AutomationIdにマッピング |
-| WinForms | ★★★★☆ | 良好 | `AccessibleName` = AutomationId |
-| UWP / WinUI 3 | ★★★★★ | 優秀 | Microsoftの完全サポート |
-| Qt 6.x | ★★★★★ | 優秀 | アクセシビリティがデフォルトで有効；クラス名が `Qt6*` に変更 |
-| Qt 5.15+ | ★★★★☆ | 良好 | Accessibilityモジュールが改善 |
-| Qt 5.7–5.14 | ★★★☆☆ | 普通 | `QT_ACCESSIBILITY=1` が必要；objectNameは手動設定 |
-| Win32 / MFC | ★★★☆☆ | 普通 | コントロールIDにアクセス可能；テキストマッチングが一般的 |
+| WPF |  | 優秀 | `x:Name` が直接AutomationIdにマッピング |
+| WinForms | ☆ | 良好 | `AccessibleName` = AutomationId |
+| UWP / WinUI 3 |  | 優秀 | Microsoftの完全サポート |
+| Qt 6.x |  | 優秀 | アクセシビリティがデフォルトで有効；クラス名が `Qt6*` に変更 |
+| Qt 5.15+ | ☆ | 良好 | Accessibilityモジュールが改善 |
+| Qt 5.7–5.14 | ☆☆ | 普通 | `QT_ACCESSIBILITY=1` が必要；objectNameは手動設定 |
+| Win32 / MFC | ☆☆ | 普通 | コントロールIDにアクセス可能；テキストマッチングが一般的 |
 
 ## セットアップと前提条件
 

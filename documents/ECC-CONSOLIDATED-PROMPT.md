@@ -55,8 +55,8 @@ This prompt covers full architectural understanding AND production readiness. Co
 - Identify the most **critical files and functions**.
 - Explain the core algorithms or decision logic.
 - Distinguish where **business logic** lives vs. infrastructure code.
-- 🟠 Flag any functions >50 lines or files >800 lines (ECC standard violation).
-- 🟠 Flag any nesting deeper than 4 levels.
+- Flag any functions >50 lines or files >800 lines (ECC standard violation).
+- Flag any nesting deeper than 4 levels.
 
 ---
 
@@ -88,7 +88,7 @@ Apply **both** the ECC security checklist and the OWASP Top 10 against all files
 9. **Logging Failures** — Are security-relevant events logged? Are logs free of sensitive data?
 10. **SSRF** — Are external URLs validated? Can user input control outbound requests?
 
-> Flag every violation with severity: 🔴 CRITICAL / 🟠 HIGH / 🟡 MEDIUM / 🔵 LOW
+> Flag every violation with severity:  CRITICAL /  HIGH /  MEDIUM /  LOW
 
 ---
 
@@ -97,8 +97,8 @@ Apply **both** the ECC security checklist and the OWASP Top 10 against all files
 - List all important internal and external dependencies.
 - Explain how external services, APIs, models, or databases are used.
 - List required configuration, environment variables, and secrets.
-- 🔴 Are secrets hardcoded anywhere?
-- 🟠 Are env vars validated at startup?
+- Are secrets hardcoded anywhere?
+- Are env vars validated at startup?
 
 ---
 
@@ -107,9 +107,9 @@ Apply **both** the ECC security checklist and the OWASP Top 10 against all files
 - Explain how state is managed (local, context, global store, database).
 - Describe data models, schemas, and persistence mechanisms.
 - Highlight assumptions about data consistency or lifecycle.
-- 🔴 Are database queries parameterized?
-- 🟠 Is there N+1 query risk?
-- 🟠 Are there missing indexes on foreign keys?
+- Are database queries parameterized?
+- Is there N+1 query risk?
+- Are there missing indexes on foreign keys?
 
 ---
 
@@ -117,8 +117,8 @@ Apply **both** the ECC security checklist and the OWASP Top 10 against all files
 
 - Explain how errors are handled and propagated.
 - Identify fragile areas or implicit assumptions.
-- 🟠 Are errors silently swallowed anywhere? Bare catch blocks?
-- 🟠 Are error messages user-friendly in UI code and detailed in server logs?
+- Are errors silently swallowed anywhere? Bare catch blocks?
+- Are error messages user-friendly in UI code and detailed in server logs?
 - Call out missing safeguards or risky patterns.
 
 ---
@@ -137,11 +137,11 @@ Apply **both** the ECC security checklist and the OWASP Top 10 against all files
 
 - Describe the existing testing strategy (unit, integration, E2E).
 - Estimate current test coverage.
-- 🟠 Is coverage >= 80%? (ECC standard)
+- Is coverage >= 80%? (ECC standard)
 - Are edge cases tested: null, empty, boundary, unicode, error paths?
 - Are there E2E tests for critical / changed user-facing flows?
 - Do tests cover: happy path, error path, and edge cases for every changed function/component?
-- 🔵 Flag any tests that test implementation details instead of behavior.
+- Flag any tests that test implementation details instead of behavior.
 - Run existing tests and confirm all pass.
 
 ---
@@ -187,22 +187,22 @@ Apply the ECC code quality checklist to all files (full scan for onboarding; cha
 - Explain how a new developer should **run, debug, and extend** this project.
 - Suggest improvements to structure, clarity, or maintainability.
 - Propose next steps if this project were to scale or go to production.
-- Prioritize suggestions: 🔴 CRITICAL (do now) / 🟠 HIGH (do soon) / 🟡 MEDIUM (when convenient) / 🔵 LOW (nice to have).
+- Prioritize suggestions:  CRITICAL (do now) /  HIGH (do soon) /  MEDIUM (when convenient) /  LOW (nice to have).
 
 ---
 
 ## OUTPUT
 
 ### Deployment Decision
-> ✅ APPROVE / ⚠️ APPROVE WITH NOTES / 🚫 BLOCK
+> PASS: APPROVE / WARNING: APPROVE WITH NOTES /  BLOCK
 
 ### Findings Summary
 | Severity | Count | Category |
 |----------|-------|----------|
-| 🔴 CRITICAL | ? | Must fix before deploy |
-| 🟠 HIGH | ? | Should fix before deploy |
-| 🟡 MEDIUM | ? | Fix soon after deploy |
-| 🔵 LOW | ? | Nice to have |
+|  CRITICAL | ? | Must fix before deploy |
+|  HIGH | ? | Should fix before deploy |
+|  MEDIUM | ? | Fix soon after deploy |
+|  LOW | ? | Nice to have |
 
 ### Detailed Findings
 For each finding, include: **severity · file · line number · description · suggested fix**

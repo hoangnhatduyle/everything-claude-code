@@ -113,7 +113,7 @@ Please do the following in order:
     - Prioritize suggestions as: CRITICAL (do now) / HIGH (do soon) / MEDIUM (when convenient) / LOW (nice to have).
 
 OUTPUT FORMAT:
-- Use severity tags: 🔴 CRITICAL, 🟠 HIGH, 🟡 MEDIUM, 🔵 LOW
+- Use severity tags:  CRITICAL,  HIGH,  MEDIUM,  LOW
 - Reference specific files, functions, and line numbers in your explanations.
 - Include code snippets for any violations found.
 - End with a summary scorecard:
@@ -196,15 +196,15 @@ For every changed file, check:
 
 ## OUTPUT
 
-### Deployment Decision: ✅ APPROVE / ⚠️ APPROVE WITH NOTES / 🚫 BLOCK
+### Deployment Decision: PASS: APPROVE / WARNING: APPROVE WITH NOTES /  BLOCK
 
 ### Findings Summary
 | Severity | Count | Category |
 |----------|-------|----------|
-| 🔴 CRITICAL | ? | Must fix before deploy |
-| 🟠 HIGH | ? | Should fix before deploy |
-| 🟡 MEDIUM | ? | Fix soon after deploy |
-| 🔵 LOW | ? | Nice to have |
+|  CRITICAL | ? | Must fix before deploy |
+|  HIGH | ? | Should fix before deploy |
+|  MEDIUM | ? | Fix soon after deploy |
+|  LOW | ? | Nice to have |
 
 ### Detailed Findings
 [List each finding with: severity, file, line, description, suggested fix]
