@@ -7,15 +7,11 @@
 'use strict';
 
 const assert = require('assert');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
 
 const {
   run,
   extractEssentialState,
   formatCompactState,
-  COMPACT_STATE_FILE,
 } = require('../../scripts/hooks/pre-compact-preserve');
 
 function test(name, fn) {

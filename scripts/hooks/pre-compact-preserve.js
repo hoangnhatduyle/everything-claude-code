@@ -27,7 +27,7 @@ const { getClaudeDir, getSessionsDir, ensureDir, getDateTimeString } = require('
 
 const COMPACT_STATE_FILE = 'compact-state.md';
 
-function run(inputOrRaw) {
+function run(_inputOrRaw) {
   try {
     const transcriptPath = findActiveTranscript();
     if (!transcriptPath) return { exitCode: 0 };
