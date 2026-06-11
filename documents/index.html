@@ -342,7 +342,7 @@
       <div class="cr"><span class="cmd">/update-docs</span><span class="desc">Sync documentation with codebase changes</span></div>
       <div class="cr"><span class="cmd">/update-codemaps</span><span class="desc">Generate architecture codemaps from codebase</span></div>
       <div class="cr"><span class="cmd">/refactor-clean</span><span class="desc">Safely identify &amp; remove dead code with test verification</span></div>
-      <div class="cr"><span class="cmd">/quality-gate</span><span class="desc">Run format + lint + type checks on demand</span></div>
+      <div class="cr"><span class="cmd">/quality-gate</span><span class="desc">Single-file formatter check (Biome/Prettier/gofmt/ruff format) — lint/type/test live in /verification-loop</span></div>
       <div class="cr"><span class="cmd">/rules-distill</span><span class="desc">Extract cross-cutting principles from skills into rules</span></div>
       <div class="cr"><span class="cmd">/harness-audit</span><span class="desc">Run deterministic repo audit and return scorecard</span></div>
       <div class="cr"><span class="cmd">/ecc-guide</span><span class="desc">Navigate ECC's agents, skills, commands, hooks &amp; install profiles from the live repo <span class="badge bn">NEW</span></span></div>
@@ -447,7 +447,7 @@
     <div class="ws"><div class="sn">1</div><div><div class="sc">/code-review</div><div class="sn2">security + quality scan</div></div></div>
     <div class="ws"><div class="sn">2</div><div><div class="sc">/e2e-testing</div><div class="sn2">end-to-end test critical flows</div></div></div>
     <div class="ws"><div class="sn">3</div><div><div class="sc">/verification-loop</div><div class="sn2">full build + lint + type check</div></div></div>
-    <div class="ws"><div class="sn">4</div><div><div class="sc">/quality-gate</div><div class="sn2">format + lint final pass</div></div></div>
+    <div class="ws"><div class="sn">4</div><div><div class="sc">/quality-gate</div><div class="sn2">formatter check on changed files</div></div></div>
   </div>
   <div class="wf">
     <div class="wf-title">⚔️ Quality Loop <span class="badge bn">NEW</span></div>
@@ -522,6 +522,25 @@
           <div class="cr"><span class="cmd">/project-init</span><span class="desc">Detect project stack and produce a dry-run ECC onboarding plan</span></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Orchestrator pipelines spans 2 cols -->
+  <div class="card sp2">
+    <div class="card-hd"><div class="dot" style="background:var(--accent)"></div>Orchestrator Pipelines (orch-*) <span class="badge bn">NEW</span></div>
+    <div class="card-bd">
+      <div class="two-col">
+        <div>
+          <div class="cr"><span class="cmd">/orch-add-feature</span><span class="desc">New feature end-to-end — research, plan, TDD, review, gated commit</span></div>
+          <div class="cr"><span class="cmd">/orch-build-mvp</span><span class="desc">Bootstrap an MVP from a design/spec doc — reuses the GAN harness</span></div>
+          <div class="cr"><span class="cmd">/orch-fix-defect</span><span class="desc">Prove a bug with a failing regression test, then fix to green</span></div>
+        </div>
+        <div>
+          <div class="cr"><span class="cmd">/orch-change-feature</span><span class="desc">Update tests to a new spec, then change the implementation</span></div>
+          <div class="cr"><span class="cmd">/orch-refine-code</span><span class="desc">Behavior-preserving refactor using the existing test suite</span></div>
+        </div>
+      </div>
+      <div class="desc" style="margin-top:5px;padding-top:4px;border-top:1px solid var(--border)">Shared <code style="font-family:'JetBrains Mono',monospace">orch-pipeline</code> engine — Research/Plan → <strong>GATE 1</strong> (approve plan) → TDD → code-reviewer (+security-reviewer if triggered) → <strong>GATE 2</strong> (confirm) → commit.</div>
     </div>
   </div>
 
