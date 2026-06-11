@@ -147,6 +147,7 @@
   .bh { background:#fef3e2; color:#c4620a; border:1px solid #fdba74; }
   .bm { background:#fefce8; color:#a16207; border:1px solid #fde047; }
   .bl { background:#ecfdf5; color:#1d9e86; border:1px solid #6ee7b7; }
+  .bn { background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe; }
 
   /* ── Lang tag ── */
   .lang {
@@ -162,7 +163,7 @@
   .two-col { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
 
   /* ── Workflow cards ── */
-  .wf-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; break-inside:avoid; }
+  .wf-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; break-inside:avoid; }
   .wf {
     background:var(--surface); border:1px solid var(--border);
     border-radius:7px; padding:8px 10px; break-inside:avoid;
@@ -201,9 +202,9 @@
   <div class="header-logo">⚡</div>
   <div>
     <h1>Everything <span>Claude Code</span> — Command Reference</h1>
-    <p>Slash commands that invoke specialized agents with structured workflows on top of Ask / Plan / Edit modes</p>
+    <p>Slash commands &amp; Agent Skills that invoke specialized agents with structured workflows on top of Ask / Plan / Edit modes</p>
   </div>
-  <div class="header-badge">claude.ai · Print & Keep</div>
+  <div class="header-badge">claude.ai · Print &amp; Keep</div>
 </div>
 
 <!-- Modes -->
@@ -216,12 +217,12 @@
   </div>
   <div class="mode-card">
     <div class="mode-lbl" style="color:var(--accent2)">Edit Mode</div>
-    <div class="mode-cmd" style="color:var(--accent2)">→ pair with /tdd · /build-fix · /refactor-clean</div>
+    <div class="mode-cmd" style="color:var(--accent2)">→ pair with /tdd-workflow · /build-fix · /refactor-clean</div>
     <div class="mode-desc">Writes code. These commands control <em>how</em> it writes.</div>
   </div>
   <div class="mode-card">
     <div class="mode-lbl" style="color:var(--accent3)">Ask Mode</div>
-    <div class="mode-cmd" style="color:var(--accent3)">→ pair with /docs · /code-review · /aside</div>
+    <div class="mode-cmd" style="color:var(--accent3)">→ pair with /documentation-lookup · /code-review · /aside</div>
     <div class="mode-desc">Answers questions. These give it specialized knowledge.</div>
   </div>
 </div>
@@ -235,13 +236,13 @@
     <div class="ev-ex">/plan Add a REST API for user management with auth</div>
   </div>
   <div class="ev c2">
-    <div class="ev-cmd">/tdd</div><div class="ev-title">Test-Driven Development</div>
+    <div class="ev-cmd">/tdd-workflow</div><div class="ev-title">Test-Driven Development</div>
     <div class="ev-desc">Writes failing tests first <strong>(RED)</strong>, implements minimal code <strong>(GREEN)</strong>, then refactors. Enforces <strong>80%+ coverage</strong>. JS/TS default.</div>
-    <div class="ev-ex">/tdd Write a utility that parses CSV files with error handling</div>
+    <div class="ev-ex">/tdd-workflow Write a utility that parses CSV files with error handling</div>
   </div>
   <div class="ev c3">
     <div class="ev-cmd">/code-review</div><div class="ev-title">Security &amp; Quality Review</div>
-    <div class="ev-desc">Scans staged/unstaged changes. Severity: <span class="badge bc">CRITICAL</span> <span class="badge bh">HIGH</span> <span class="badge bm">MED</span> <span class="badge bl">LOW</span></div>
+    <div class="ev-desc">Scans staged/unstaged changes, or pass a GitHub PR number/URL for PR mode. Severity: <span class="badge bc">CRITICAL</span> <span class="badge bh">HIGH</span> <span class="badge bm">MED</span> <span class="badge bl">LOW</span></div>
     <div class="ev-ex">/code-review</div>
   </div>
   <div class="ev c4">
@@ -250,14 +251,14 @@
     <div class="ev-ex">/build-fix</div>
   </div>
   <div class="ev c5">
-    <div class="ev-cmd">/e2e</div><div class="ev-title">End-to-End Testing</div>
+    <div class="ev-cmd">/e2e-testing</div><div class="ev-title">End-to-End Testing</div>
     <div class="ev-desc">Generates <strong>Playwright</strong> tests, runs across browsers, captures screenshots / videos / traces.</div>
-    <div class="ev-ex">/e2e Test the complete signup-to-dashboard flow</div>
+    <div class="ev-ex">/e2e-testing Test the complete signup-to-dashboard flow</div>
   </div>
   <div class="ev c6">
-    <div class="ev-cmd">/verify</div><div class="ev-title">Pre-Merge Verification</div>
+    <div class="ev-cmd">/verification-loop</div><div class="ev-title">Pre-Merge Verification</div>
     <div class="ev-desc">Comprehensive checks: <strong>build · type check · lint · test validation</strong>. Run before every merge.</div>
-    <div class="ev-ex">/verify</div>
+    <div class="ev-ex">/verification-loop</div>
   </div>
 </div>
 
@@ -273,17 +274,22 @@
       <div class="cr"><span class="cmd">/go-review</span><span class="desc"><span class="lang">Go</span>go-reviewer</span></div>
       <div class="cr"><span class="cmd">/kotlin-review</span><span class="desc"><span class="lang">Kotlin</span>kotlin-reviewer</span></div>
       <div class="cr"><span class="cmd">/rust-review</span><span class="desc"><span class="lang">Rust</span>rust-reviewer</span></div>
+      <div class="cr"><span class="cmd">/react-review</span><span class="desc"><span class="lang">React</span>react-reviewer + typescript-reviewer <span class="badge bn">NEW</span></span></div>
+      <div class="cr"><span class="cmd">/flutter-review</span><span class="desc"><span class="lang">Flutter</span>flutter-reviewer <span class="badge bn">NEW</span></span></div>
+      <div class="cr"><span class="cmd">/fastapi-review</span><span class="desc"><span class="lang">FastAPI</span>architecture/async/security <span class="badge bn">NEW</span></span></div>
     </div>
   </div>
   <div class="card">
     <div class="card-hd"><div class="dot" style="background:var(--accent2)"></div>TDD &amp; Testing — By Language</div>
     <div class="card-bd">
-      <div class="cr"><span class="cmd">/tdd</span><span class="desc"><span class="lang">Any</span>Jest/Vitest default</span></div>
+      <div class="cr"><span class="cmd">/tdd-workflow</span><span class="desc"><span class="lang">Any</span>Jest/Vitest default</span></div>
       <div class="cr"><span class="cmd">/cpp-test</span><span class="desc"><span class="lang">C++</span>GoogleTest + gcov/lcov</span></div>
       <div class="cr"><span class="cmd">/go-test</span><span class="desc"><span class="lang">Go</span>Table-driven + go test -cover</span></div>
       <div class="cr"><span class="cmd">/kotlin-test</span><span class="desc"><span class="lang">Kotlin</span>Kotest + Kover</span></div>
       <div class="cr"><span class="cmd">/rust-test</span><span class="desc"><span class="lang">Rust</span>proptest/rstest + cargo-llvm-cov</span></div>
-      <div class="cr"><span class="cmd">/e2e</span><span class="desc"><span class="lang">Browser</span>Playwright</span></div>
+      <div class="cr"><span class="cmd">/react-test</span><span class="desc"><span class="lang">React</span>RTL + Vitest/Jest <span class="badge bn">NEW</span></span></div>
+      <div class="cr"><span class="cmd">/flutter-test</span><span class="desc"><span class="lang">Flutter</span>unit/widget/golden/integration <span class="badge bn">NEW</span></span></div>
+      <div class="cr"><span class="cmd">/e2e-testing</span><span class="desc"><span class="lang">Browser</span>Playwright</span></div>
       <div class="cr"><span class="cmd">/test-coverage</span><span class="desc"><span class="lang">Any</span>Analyze gaps &amp; generate missing tests</span></div>
     </div>
   </div>
@@ -296,6 +302,8 @@
       <div class="cr"><span class="cmd">/kotlin-build</span><span class="desc"><span class="lang">Kotlin / Gradle</span>kotlin-build-resolver</span></div>
       <div class="cr"><span class="cmd">/rust-build</span><span class="desc"><span class="lang">Rust / Cargo</span>rust-build-resolver</span></div>
       <div class="cr"><span class="cmd">/gradle-build</span><span class="desc"><span class="lang">Android / KMP</span>kotlin-build-resolver</span></div>
+      <div class="cr"><span class="cmd">/react-build</span><span class="desc"><span class="lang">React</span>react-build-resolver <span class="badge bn">NEW</span></span></div>
+      <div class="cr"><span class="cmd">/flutter-build</span><span class="desc"><span class="lang">Flutter / Dart</span>dart-build-resolver <span class="badge bn">NEW</span></span></div>
     </div>
   </div>
 </div>
@@ -310,7 +318,9 @@
     <div class="card-hd"><div class="dot" style="background:var(--accent)"></div>Planning &amp; Optimization</div>
     <div class="card-bd">
       <div class="cr"><span class="cmd">/plan</span><span class="desc">Structured plan with phases, risks, testing strategy</span></div>
-      <div class="cr"><span class="cmd">/prompt-optimize</span><span class="desc">Analyze draft prompt → optimized version using ECC components</span></div>
+      <div class="cr"><span class="cmd">/plan-prd</span><span class="desc">Lean, problem-first PRD → hand off to /plan <span class="badge bn">NEW</span></span></div>
+      <div class="cr"><span class="cmd">/feature-dev</span><span class="desc">Guided feature development with codebase understanding &amp; architecture focus <span class="badge bn">NEW</span></span></div>
+      <div class="cr"><span class="cmd">/prompt-optimizer</span><span class="desc">Analyze draft prompt → optimized version using ECC components</span></div>
       <div class="cr"><span class="cmd">/model-route</span><span class="desc">Recommend best model tier (Haiku / Sonnet / Opus) for task complexity</span></div>
       <div class="cr"><span class="cmd">/context-budget</span><span class="desc">Analyze context window usage, find token optimization opportunities</span></div>
     </div>
@@ -328,13 +338,14 @@
   <div class="card">
     <div class="card-hd"><div class="dot" style="background:var(--accent6)"></div>Docs &amp; Maintenance</div>
     <div class="card-bd">
-      <div class="cr"><span class="cmd">/docs</span><span class="desc">Look up current library/framework docs via Context7</span></div>
+      <div class="cr"><span class="cmd">/documentation-lookup</span><span class="desc">Use up-to-date library/framework docs via Context7 instead of training data</span></div>
       <div class="cr"><span class="cmd">/update-docs</span><span class="desc">Sync documentation with codebase changes</span></div>
       <div class="cr"><span class="cmd">/update-codemaps</span><span class="desc">Generate architecture codemaps from codebase</span></div>
       <div class="cr"><span class="cmd">/refactor-clean</span><span class="desc">Safely identify &amp; remove dead code with test verification</span></div>
       <div class="cr"><span class="cmd">/quality-gate</span><span class="desc">Run format + lint + type checks on demand</span></div>
       <div class="cr"><span class="cmd">/rules-distill</span><span class="desc">Extract cross-cutting principles from skills into rules</span></div>
       <div class="cr"><span class="cmd">/harness-audit</span><span class="desc">Run deterministic repo audit and return scorecard</span></div>
+      <div class="cr"><span class="cmd">/ecc-guide</span><span class="desc">Navigate ECC's agents, skills, commands, hooks &amp; install profiles from the live repo <span class="badge bn">NEW</span></span></div>
     </div>
   </div>
 
@@ -368,15 +379,17 @@
     <div class="card-bd">
       <div class="two-col">
         <div>
-          <div class="cr"><span class="cmd">/orchestrate</span><span class="desc">Sequential agents: plan → tdd → review → security</span></div>
+          <div class="cr"><span class="cmd">/dmux-workflows</span><span class="desc">Parallel agent panes/worktrees via tmux — Claude Code, Codex, OpenCode</span></div>
+          <div class="cr"><span class="cmd">/autonomous-agent-harness</span><span class="desc">Persistent memory, scheduled ops, task queuing — autonomous loops</span></div>
+          <div class="cr"><span class="cmd">/plan-orchestrate</span><span class="desc">Decompose a plan doc into a per-step /orchestrate agent chain <span class="badge bn">NEW</span></span></div>
           <div class="cr"><span class="cmd">/multi-workflow</span><span class="desc">Full 6-phase multi-model development workflow</span></div>
           <div class="cr"><span class="cmd">/multi-plan</span><span class="desc">Multi-model planning phase</span></div>
           <div class="cr"><span class="cmd">/multi-execute</span><span class="desc">Multi-model execution phase</span></div>
-          <div class="cr"><span class="cmd">/multi-backend</span><span class="desc">Backend-focused multi-model workflow</span></div>
         </div>
         <div>
+          <div class="cr"><span class="cmd">/multi-backend</span><span class="desc">Backend-focused multi-model workflow</span></div>
           <div class="cr"><span class="cmd">/multi-frontend</span><span class="desc">Frontend-focused multi-model workflow</span></div>
-          <div class="cr"><span class="cmd">/devfleet</span><span class="desc">Parallel agents in isolated git worktrees</span></div>
+          <div class="cr"><span class="cmd">/claude-devfleet</span><span class="desc">Plan projects, dispatch parallel agents in isolated worktrees</span></div>
           <div class="cr"><span class="cmd">/loop-start</span><span class="desc">Start autonomous agent loop with safety controls</span></div>
           <div class="cr"><span class="cmd">/loop-status</span><span class="desc">Inspect loop state, progress, and failure signals</span></div>
         </div>
@@ -390,8 +403,8 @@
     <div class="card-bd">
       <div class="cr"><span class="cmd">/setup-pm</span><span class="desc">Configure preferred package manager (npm / pnpm / yarn / bun)</span></div>
       <div class="cr"><span class="cmd">/pm2</span><span class="desc">Auto-analyze project and generate PM2 service commands</span></div>
-      <div class="cr"><span class="cmd">/claw</span><span class="desc">Start NanoClaw — persistent REPL with model routing &amp; branching</span></div>
-      <div class="cr"><span class="cmd">/eval</span><span class="desc">Manage eval-driven development workflows</span></div>
+      <div class="cr"><span class="cmd">/nanoclaw-repl</span><span class="desc">NanoClaw v2 — zero-dependency session-aware REPL on claude -p</span></div>
+      <div class="cr"><span class="cmd">/eval-harness</span><span class="desc">Formal eval-driven development (EDD) framework</span></div>
     </div>
   </div>
 
@@ -403,16 +416,23 @@
   <div class="wf">
     <div class="wf-title">🚀 Feature Development</div>
     <div class="ws"><div class="sn">1</div><div><div class="sc">/plan Add feature X</div><div class="sn2">plan it, then approve</div></div></div>
-    <div class="ws"><div class="sn">2</div><div><div class="sc">/tdd</div><div class="sn2">implement with tests</div></div></div>
+    <div class="ws"><div class="sn">2</div><div><div class="sc">/tdd-workflow</div><div class="sn2">implement with tests</div></div></div>
     <div class="ws"><div class="sn">3</div><div><div class="sc">/code-review</div><div class="sn2">review before commit</div></div></div>
     <div class="ws"><div class="sn">4</div><div><div class="sc">git commit</div><div class="sn2">ship it</div></div></div>
   </div>
   <div class="wf">
     <div class="wf-title">🐛 Bug Fix</div>
-    <div class="ws"><div class="sn">1</div><div><div class="sc">/tdd Fix the race condition…</div><div class="sn2">test-drive the fix</div></div></div>
+    <div class="ws"><div class="sn">1</div><div><div class="sc">/tdd-workflow Fix the race condition…</div><div class="sn2">test-drive the fix</div></div></div>
     <div class="ws"><div class="sn">2</div><div><div class="sc">/build-fix</div><div class="sn2">if build breaks</div></div></div>
-    <div class="ws"><div class="sn">3</div><div><div class="sc">/verify</div><div class="sn2">confirm everything passes</div></div></div>
+    <div class="ws"><div class="sn">3</div><div><div class="sc">/verification-loop</div><div class="sn2">confirm everything passes</div></div></div>
     <div class="ws"><div class="sn">4</div><div><div class="sc">git commit</div><div class="sn2">done</div></div></div>
+  </div>
+  <div class="wf">
+    <div class="wf-title">📋 PRP Workflow <span class="badge bn">NEW</span></div>
+    <div class="ws"><div class="sn">1</div><div><div class="sc">/prp-prd</div><div class="sn2">interactive, problem-first PRD</div></div></div>
+    <div class="ws"><div class="sn">2</div><div><div class="sc">/prp-plan</div><div class="sn2">implementation plan + codebase analysis</div></div></div>
+    <div class="ws"><div class="sn">3</div><div><div class="sc">/prp-implement</div><div class="sn2">execute with validation loops</div></div></div>
+    <div class="ws"><div class="sn">4</div><div><div class="sc">/prp-pr</div><div class="sn2">create GitHub PR</div></div></div>
   </div>
   <div class="wf">
     <div class="wf-title">💾 Session Bookmarks</div>
@@ -425,9 +445,111 @@
   <div class="wf">
     <div class="wf-title">🚢 Pre-Deployment</div>
     <div class="ws"><div class="sn">1</div><div><div class="sc">/code-review</div><div class="sn2">security + quality scan</div></div></div>
-    <div class="ws"><div class="sn">2</div><div><div class="sc">/e2e</div><div class="sn2">end-to-end test critical flows</div></div></div>
-    <div class="ws"><div class="sn">3</div><div><div class="sc">/verify</div><div class="sn2">full build + lint + type check</div></div></div>
+    <div class="ws"><div class="sn">2</div><div><div class="sc">/e2e-testing</div><div class="sn2">end-to-end test critical flows</div></div></div>
+    <div class="ws"><div class="sn">3</div><div><div class="sc">/verification-loop</div><div class="sn2">full build + lint + type check</div></div></div>
     <div class="ws"><div class="sn">4</div><div><div class="sc">/quality-gate</div><div class="sn2">format + lint final pass</div></div></div>
+  </div>
+  <div class="wf">
+    <div class="wf-title">⚔️ Quality Loop <span class="badge bn">NEW</span></div>
+    <div class="ws"><div class="sn">1</div><div><div class="sc">/gan-design or /gan-build</div><div class="sn2">generator/evaluator loop, scored iterations</div></div></div>
+    <div class="ws"><div class="sn">2</div><div><div class="sc">/santa-loop</div><div class="sn2">adversarial dual-review convergence</div></div></div>
+    <div class="ws"><div class="sn">3</div><div><div class="sc">/review-pr</div><div class="sn2">comprehensive PR review</div></div></div>
+    <div class="ws"><div class="sn">4</div><div><div class="sc">/security-scan</div><div class="sn2">AgentShield surface scan</div></div></div>
+  </div>
+</div>
+
+<!-- ═══ PAGE 3 ═══ -->
+<div class="page-break"></div>
+
+<!-- Extended commands -->
+<div class="sec avoid">Extended Commands — Git, Quality Loops &amp; Integrations</div>
+<div class="g3" style="margin-bottom:10px">
+
+  <!-- Git/PR/PRP spans 2 cols -->
+  <div class="card sp2">
+    <div class="card-hd"><div class="dot" style="background:var(--accent2)"></div>Git, PR &amp; PRP Workflow</div>
+    <div class="card-bd">
+      <div class="two-col">
+        <div>
+          <div class="cr"><span class="cmd">/pr</span><span class="desc">Create GitHub PR from current branch — discovers templates, analyzes changes, pushes</span></div>
+          <div class="cr"><span class="cmd">/review-pr</span><span class="desc">Comprehensive PR review using specialized agents</span></div>
+          <div class="cr"><span class="cmd">/prp-commit</span><span class="desc">Quick commit with natural-language file targeting</span></div>
+          <div class="cr"><span class="cmd">/prp-pr</span><span class="desc">Create GitHub PR — PRP variant</span></div>
+        </div>
+        <div>
+          <div class="cr"><span class="cmd">/prp-prd</span><span class="desc">Interactive, problem-first PRD with back-and-forth questioning</span></div>
+          <div class="cr"><span class="cmd">/prp-plan</span><span class="desc">Implementation plan with codebase analysis &amp; pattern extraction</span></div>
+          <div class="cr"><span class="cmd">/prp-implement</span><span class="desc">Execute an implementation plan with rigorous validation loops</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAN + Santa, 1 col -->
+  <div class="card">
+    <div class="card-hd"><div class="dot" style="background:var(--accent5)"></div>GAN Harness &amp; Quality Loops</div>
+    <div class="card-bd">
+      <div class="cr"><span class="cmd">/gan-design</span><span class="desc">Generator/evaluator design loop for frontend/visual work — bounded iterations + scoring</span></div>
+      <div class="cr"><span class="cmd">/gan-build</span><span class="desc">Generator/evaluator build loop for implementation tasks — bounded iterations + scoring</span></div>
+      <div class="cr"><span class="cmd">/santa-loop</span><span class="desc">Adversarial dual-review convergence — two independent reviewers must both approve</span></div>
+    </div>
+  </div>
+
+  <!-- Hookify, 1 col -->
+  <div class="card">
+    <div class="card-hd"><div class="dot" style="background:var(--accent4)"></div>Hookify — Behavior Rules</div>
+    <div class="card-bd">
+      <div class="cr"><span class="cmd">/hookify</span><span class="desc">Create hooks to prevent unwanted behaviors from conversation analysis or instructions</span></div>
+      <div class="cr"><span class="cmd">/hookify-list</span><span class="desc">List all configured hookify rules</span></div>
+      <div class="cr"><span class="cmd">/hookify-configure</span><span class="desc">Enable or disable hookify rules interactively</span></div>
+      <div class="cr"><span class="cmd">/hookify-help</span><span class="desc">Get help with the hookify system</span></div>
+    </div>
+  </div>
+
+  <!-- Integrations spans 2 cols -->
+  <div class="card sp2">
+    <div class="card-hd"><div class="dot" style="background:var(--accent6)"></div>Integrations &amp; Repo Ops</div>
+    <div class="card-bd">
+      <div class="two-col">
+        <div>
+          <div class="cr"><span class="cmd">/jira</span><span class="desc">Retrieve a Jira ticket, analyze requirements, update status, or add comments via MCP/REST</span></div>
+          <div class="cr"><span class="cmd">/marketing-campaign</span><span class="desc">Plan/execute a full marketing campaign — positioning, copy, email, social, ads, video, calendar</span></div>
+          <div class="cr"><span class="cmd">/security-scan</span><span class="desc">Run AgentShield against agent, hook, MCP, permission &amp; secret surfaces</span></div>
+        </div>
+        <div>
+          <div class="cr"><span class="cmd">/cost-report</span><span class="desc">Generate local Claude Code cost report from cost-tracker SQLite DB</span></div>
+          <div class="cr"><span class="cmd">/auto-update</span><span class="desc">Pull latest ECC repo changes and reinstall current managed targets</span></div>
+          <div class="cr"><span class="cmd">/project-init</span><span class="desc">Detect project stack and produce a dry-run ECC onboarding plan</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Renamed / legacy -->
+<div class="sec avoid">Renamed Commands — Legacy Shims</div>
+<div class="card">
+  <div class="card-hd"><div class="dot" style="background:var(--muted)"></div>Old Name → Current Name</div>
+  <div class="card-bd">
+    <div class="two-col">
+      <div>
+        <div class="cr"><span class="cmd">/tdd</span><span class="desc">→ <span class="cmd" style="min-width:0;color:var(--accent3)">/tdd-workflow</span></span></div>
+        <div class="cr"><span class="cmd">/e2e</span><span class="desc">→ <span class="cmd" style="min-width:0;color:var(--accent3)">/e2e-testing</span></span></div>
+        <div class="cr"><span class="cmd">/verify</span><span class="desc">→ <span class="cmd" style="min-width:0;color:var(--accent3)">/verification-loop</span></span></div>
+        <div class="cr"><span class="cmd">/docs</span><span class="desc">→ <span class="cmd" style="min-width:0;color:var(--accent3)">/documentation-lookup</span></span></div>
+        <div class="cr"><span class="cmd">/prompt-optimize</span><span class="desc">→ <span class="cmd" style="min-width:0;color:var(--accent3)">/prompt-optimizer</span></span></div>
+        <div class="cr"><span class="cmd">/eval</span><span class="desc">→ <span class="cmd" style="min-width:0;color:var(--accent3)">/eval-harness</span></span></div>
+      </div>
+      <div>
+        <div class="cr"><span class="cmd">/claw</span><span class="desc">→ <span class="cmd" style="min-width:0;color:var(--accent3)">/nanoclaw-repl</span></span></div>
+        <div class="cr"><span class="cmd">/devfleet</span><span class="desc">→ <span class="cmd" style="min-width:0;color:var(--accent3)">/claude-devfleet</span></span></div>
+        <div class="cr"><span class="cmd">/orchestrate</span><span class="desc">→ <span class="cmd" style="min-width:0;color:var(--accent3)">/dmux-workflows</span> + <span class="cmd" style="min-width:0;color:var(--accent3)">/autonomous-agent-harness</span></span></div>
+        <div class="cr"><span class="cmd">/rules-distill</span><span class="desc">unchanged — now skill-backed, same invocation</span></div>
+        <div class="cr"><span class="cmd">/context-budget</span><span class="desc">unchanged — now skill-backed, same invocation</span></div>
+      </div>
+    </div>
+    <div class="desc" style="margin-top:5px;padding-top:4px;border-top:1px solid var(--border)">Shims live under <code style="font-family:'JetBrains Mono',monospace">legacy-command-shims/</code> for short-term migration only — copy individually if still needed. The right-hand names are the maintained surface; invoke the same way (<code style="font-family:'JetBrains Mono',monospace">/&lt;name&gt;</code>).</div>
   </div>
 </div>
 
