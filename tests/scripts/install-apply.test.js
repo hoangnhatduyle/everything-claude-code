@@ -40,6 +40,7 @@ function run(args = [], options = {}) {
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: options.timeout || DEFAULT_INSTALL_APPLY_TIMEOUT_MS,
+      maxBuffer: 10 * 1024 * 1024,
     });
 
     return { code: 0, stdout, stderr: '' };
