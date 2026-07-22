@@ -197,6 +197,7 @@ Apply the ECC code quality checklist to all files (full scan for onboarding; cha
 > PASS: APPROVE / WARNING: APPROVE WITH NOTES /  BLOCK
 
 ### Findings Summary
+
 | Severity | Count | Category |
 |----------|-------|----------|
 |  CRITICAL | ? | Must fix before deploy |
@@ -213,6 +214,7 @@ For each finding, include: **severity · file · line number · description · s
 - Missing tests: [list]
 
 ### Scorecard
+
 | Dimension | Score |
 |-----------|-------|
 | Architecture | /10 |
