@@ -601,6 +601,64 @@ async function runTests() {
   else failed++;
 
   if (
+    await asyncTest('ranks stack-relevant instincts above higher-confidence unrelated ones (#2371)', async () => {
+      const isoHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-instinct-relevance-'));
+      const homunculusDir = path.join(isoHome, 'homunculus');
+      const instinctsDir = path.join(homunculusDir, 'instincts', 'personal');
+      fs.mkdirSync(instinctsDir, { recursive: true });
+      // A stack-matching 0.75 instinct and an unrelated higher-confidence 0.9.
+      fs.writeFileSync(
+        path.join(instinctsDir, 'terraform-first.md'),
+        '---\nid: terraform-first\nconfidence: 0.75\ndomain: terraform\n---\n## Action\nRun terraform plan before every apply.\n'
+      );
+      fs.writeFileSync(
+        path.join(instinctsDir, 'unrelated-high.md'),
+        '---\nid: unrelated-high\nconfidence: 0.9\ndomain: python\n---\n## Action\nPin Python dependencies in requirements.txt.\n'
+      );
+      // A project root that detects as terraform via a *.tf marker.
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-tf-project-'));
+      fs.writeFileSync(path.join(projectRoot, 'main.tf'), 'resource "null_resource" "x" {}\n');
+
+      const baseEnv = {
+        HOME: isoHome,
+        USERPROFILE: isoHome,
+        CLV2_HOMUNCULUS_DIR: homunculusDir,
+        CLAUDE_PROJECT_DIR: projectRoot,
+        ECC_INSTINCT_RELEVANCE_RANKING: 'on',
+        ECC_INSTINCT_CONFIDENCE_THRESHOLD: '0.7',
+        ECC_MAX_INJECTED_INSTINCTS: '6',
+      };
+
+      try {
+        const on = await runScript(path.join(scriptsDir, 'session-start.js'), '', baseEnv);
+        assert.strictEqual(on.code, 0);
+        const ctxOn = getSessionStartAdditionalContext(on.stdout);
+        const tfOn = ctxOn.indexOf('Run terraform plan before every apply.');
+        const pyOn = ctxOn.indexOf('Pin Python dependencies in requirements.txt.');
+        assert.ok(tfOn !== -1 && pyOn !== -1, `both instincts should inject, ctx: ${ctxOn}`);
+        assert.ok(tfOn < pyOn, `stack-matching 0.75 should rank above unrelated 0.9 when relevance is on, ctx: ${ctxOn}`);
+
+        // Opting out restores pure confidence ordering (0.9 before 0.75).
+        const off = await runScript(path.join(scriptsDir, 'session-start.js'), '', {
+          ...baseEnv,
+          ECC_INSTINCT_RELEVANCE_RANKING: 'off',
+        });
+        assert.strictEqual(off.code, 0);
+        const ctxOff = getSessionStartAdditionalContext(off.stdout);
+        const tfOff = ctxOff.indexOf('Run terraform plan before every apply.');
+        const pyOff = ctxOff.indexOf('Pin Python dependencies in requirements.txt.');
+        assert.ok(tfOff !== -1 && pyOff !== -1, `both instincts should still inject, ctx: ${ctxOff}`);
+        assert.ok(pyOff < tfOff, `with ranking off, higher-confidence 0.9 should rank first, ctx: ${ctxOff}`);
+      } finally {
+        fs.rmSync(isoHome, { recursive: true, force: true });
+        fs.rmSync(projectRoot, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
     await asyncTest('disables session-start additional context when requested', async () => {
       const isoHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-disabled-start-'));
       const sessionsDir = getLegacySessionsDir(isoHome);
@@ -1247,7 +1305,9 @@ async function runTests() {
 
       // Create an active .tmp session file
       const sessionFile = path.join(sessionsDir, '2026-02-11-test-session.tmp');
-      fs.writeFileSync(sessionFile, '# Session: 2026-02-11\n**Started:** 10:00\n');
+      fs.writeFileSync(sessionFile, buildSessionStartFixture('**Started:** 10:00', {
+        title: '# Session: 2026-02-11'
+      }));
 
       try {
         await runScript(path.join(scriptsDir, 'pre-compact.js'), '', {
@@ -3175,6 +3235,40 @@ async function runTests() {
     passed++;
   else failed++;
 
+  if (
+    test('observer scripts only call homunculus resolvers the shared lib defines (#2452)', () => {
+      const skillRoot = path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2');
+      const libSource = fs.readFileSync(path.join(skillRoot, 'scripts', 'lib', 'homunculus-dir.sh'), 'utf8');
+      const definedResolvers = new Set([...libSource.matchAll(/^([A-Za-z_][A-Za-z0-9_]*_resolve_homunculus_dir)\(\)/gm)].map((m) => m[1]));
+      assert.ok(definedResolvers.size > 0, 'homunculus-dir.sh should define a homunculus resolver function');
+
+      const callers = [
+        ['agents', 'start-observer.sh'],
+        ['hooks', 'observe.sh'],
+        ['scripts', 'detect-project.sh'],
+        ['scripts', 'migrate-homunculus.sh']
+      ];
+      for (const rel of callers) {
+        const callerSource = fs.readFileSync(path.join(skillRoot, ...rel), 'utf8');
+        for (const match of callerSource.matchAll(/([A-Za-z_][A-Za-z0-9_]*_resolve_homunculus_dir)\b/g)) {
+          assert.ok(definedResolvers.has(match[1]), `${rel.join('/')} calls ${match[1]}, which homunculus-dir.sh does not define (stale name breaks daemon boot under set -e)`);
+        }
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('observer-loop closes stdin on the backgrounded claude analysis call (#2452)', () => {
+      const observerLoopSource = fs.readFileSync(path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2', 'agents', 'observer-loop.sh'), 'utf8');
+
+      assert.ok(observerLoopSource.includes('-p "$prompt_content" < /dev/null'), 'observer-loop should close stdin on the backgrounded claude call so Git Bash children do not hang on inherited stdin and exit 1');
+    })
+  )
+    passed++;
+  else failed++;
+
   if (SKIP_BASH) {
     console.log('  ⊘ detect-project exports the resolved Python command (skipped on Windows)');
     passed++;
@@ -3728,7 +3822,7 @@ async function runTests() {
       // Create a session .tmp file and a non-session .tmp file
       const sessionFile = path.join(sessionsDir, '2026-02-11-abc-session.tmp');
       const otherTmpFile = path.join(sessionsDir, 'other-data.tmp');
-      fs.writeFileSync(sessionFile, '# Session\n');
+      fs.writeFileSync(sessionFile, buildSessionStartFixture('', { title: '# Session' }));
       fs.writeFileSync(otherTmpFile, 'some other data\n');
 
       try {
@@ -4643,11 +4737,11 @@ async function runTests() {
     passed++;
   else failed++;
 
-  // Round 41: pre-compact.js (multiple session files)
+  // Round 41: pre-compact.js (multiple sessions for the current worktree)
   console.log('\nRound 41: pre-compact.js (multiple session files):');
 
   if (
-    await asyncTest('annotates only the newest session file when multiple exist', async () => {
+    await asyncTest('annotates only the newest session when multiple match the current worktree', async () => {
       const isoHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-compact-multi-'));
       const sessionsDir = getCanonicalSessionsDir(isoHome);
       fs.mkdirSync(sessionsDir, { recursive: true });
@@ -4655,11 +4749,12 @@ async function runTests() {
       // Create two session files with different mtimes
       const olderSession = path.join(sessionsDir, '2026-01-01-older-session.tmp');
       const newerSession = path.join(sessionsDir, '2026-02-11-newer-session.tmp');
-      fs.writeFileSync(olderSession, '# Older Session\n');
+      const olderContent = buildSessionStartFixture('', { title: '# Older Session' });
+      fs.writeFileSync(olderSession, olderContent);
       // Small delay to ensure different mtime
       const now = Date.now();
       fs.utimesSync(olderSession, new Date(now - 60000), new Date(now - 60000));
-      fs.writeFileSync(newerSession, '# Newer Session\n');
+      fs.writeFileSync(newerSession, buildSessionStartFixture('', { title: '# Newer Session' }));
 
       try {
         const result = await runScript(path.join(scriptsDir, 'pre-compact.js'), '', {
@@ -4669,11 +4764,11 @@ async function runTests() {
         assert.strictEqual(result.code, 0);
 
         const newerContent = fs.readFileSync(newerSession, 'utf8');
-        const olderContent = fs.readFileSync(olderSession, 'utf8');
+        const updatedOlderContent = fs.readFileSync(olderSession, 'utf8');
 
-        // findFiles sorts by mtime newest first, so sessions[0] is the newest
+        // findFiles sorts matches by mtime, so the newest matching worktree wins.
         assert.ok(newerContent.includes('Compaction occurred'), 'Should annotate the newest session file');
-        assert.strictEqual(olderContent, '# Older Session\n', 'Should NOT annotate older session files');
+        assert.strictEqual(updatedOlderContent, olderContent, 'Should NOT annotate older session files');
       } finally {
         fs.rmSync(isoHome, { recursive: true, force: true });
       }
@@ -6175,7 +6270,9 @@ Some random content without the expected ### Context to Load section
 
       // Create a minimal session .tmp file
       const sessionFile = path.join(sessionsDir, '2026-01-01-test-session.tmp');
-      fs.writeFileSync(sessionFile, '# Session: 2026-01-01\n');
+      fs.writeFileSync(sessionFile, buildSessionStartFixture('', {
+        title: '# Session: 2026-01-01'
+      }));
 
       // Create a minimal transcript with one user message
       const transcriptPath = path.join(testDir, 'transcript.jsonl');
