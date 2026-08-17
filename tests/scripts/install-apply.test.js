@@ -47,7 +47,6 @@ function run(args = [], options = {}) {
       env,
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      maxBuffer: 4 * 1024 * 1024,
       timeout: options.timeout || DEFAULT_INSTALL_APPLY_TIMEOUT_MS,
       maxBuffer: 10 * 1024 * 1024,
     });
